@@ -2,7 +2,15 @@
 title: CRAN package convertid
 ---
 
-This is the first submission of that package.
+## Resubmission 2021-08-20
+This is a resubmission. The version was increased to 0.1.1 after addressing the comments by CRAN staff member Uwe Ligges:
+
+* single-quoted package and software, e.g. 'AnnotationDbi'
+* unquoted function names, e.g., convertId2()
+
+The word "Ensembl" is not misspelled but refers to the Ensembl project. It is used, e.g., in the DESCRIPTION of the `biomaRt` package.
+
+In addition to the above corrections, I added a co-author and made minor modifications to the package description.
 
 ## Notes
 The first win.builder check gave the following timings when running examples:  

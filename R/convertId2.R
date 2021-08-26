@@ -1,11 +1,11 @@
 #' @title Convert Gene IDs Between Each Other and Fetch Annotations from Biomart
 #' @docType package
 #' @name convertid
-#' @description Gene Symbols or Ensembl Gene IDs are converted using the Bimap interface in AnnotationDbi in \code{convertId2()}
-#'     but that function is only provided as fallback mechanism for the most common use cases in data analysis. The main
-#'     function in the package is \code{convert.bm()} which queries Biomart using the full capacity of the API. Presets
-#'     and defaults are provided for convenience but all 'marts', 'filters' and 'attributes' can be set by the user.
-#'     Function \code{convert.alias()} converts Gene Symbols to Aliases and vice versa.
+#' @description Gene Symbols or Ensembl Gene IDs are converted using the Bimap interface in 'AnnotationDbi' in convertId2() but
+#'     that function is only provided as fallback mechanism for the most common use cases in data analysis. The main function
+#'     in the package is convert.bm() which queries Biomart using the full capacity of the API provided through the
+#'     'biomaRt' package. Presets and defaults are provided for convenience but all "marts", "filters" and "attributes"
+#'     can be set by the user. Function convert.alias() converts Gene Symbols to Aliases and vice versa.
 #' @author Vidal Fey <vidal.fey@gmail.com>
 #' Maintainer: Vidal Fey <vidal.fey@gmail.com>
 #' @details \tabular{ll}{
