@@ -5,7 +5,8 @@
 #'     that function is only provided as fallback mechanism for the most common use cases in data analysis. The main function
 #'     in the package is convert.bm() which queries Biomart using the full capacity of the API provided through the
 #'     'biomaRt' package. Presets and defaults are provided for convenience but all "marts", "filters" and "attributes"
-#'     can be set by the user. Function convert.alias() converts Gene Symbols to Aliases and vice versa.
+#'     can be set by the user. Function convert.alias() converts Gene Symbols to Aliases and vice versa and function
+#'     likely_symbol() attempts to determine the most likely current Gene Symbol.
 #' @author Vidal Fey <vidal.fey@gmail.com>
 #' Maintainer: Vidal Fey <vidal.fey@gmail.com>
 #' @details \tabular{ll}{
@@ -26,6 +27,7 @@
 #' @import biomaRt
 #' @import xml2
 #' @importFrom stats na.omit
+#' @importFrom utils read.delim
 NULL
 #' Convert Gene Symbols to Ensembl Gene IDs or vice versa
 #' @description \command{convertId2} uses the Bimap interface in AnnotationDbi to extract information from
@@ -184,7 +186,7 @@ convert.alias <-
         validkeys <- keys(db, k)
         plyr::ldply(c(i1, i2), function(x) {
           if (any(validkeys %in% x))
-            AnnotationDbi::select(db, keys=x, columns=c("SYMBOL","ALIAS"), keytype=k)
+            suppressMessages(AnnotationDbi::select(db, keys=x, columns=c("SYMBOL","ALIAS"), keytype=k))
           else
             data.frame(ALIAS=NA_character_, SYMBOL=NA_character_)
         })
@@ -194,7 +196,7 @@ convert.alias <-
       } else {
         kdf <- na.omit(kdf)
         plyr::ddply(kdf, "SYMBOL", function(s) {
-          AnnotationDbi::select(db, keys=s$SYMBOL, columns=c("SYMBOL","ALIAS"), keytype="SYMBOL")
+          suppressMessages(AnnotationDbi::select(db, keys=s$SYMBOL, columns=c("SYMBOL","ALIAS"), keytype="SYMBOL"))
         })
       }
     })
@@ -330,7 +332,7 @@ get.bm <-
 #'     e.g., for visualisation, which is why the input ID type is hard coded to ENSG IDs. If Biomart is not available
 #'     the functions can fall back to use \code{convertId2} or a user-provided data frame with corresponding ENSG IDs and
 #'     Symbols.
-#' @param ensg (\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet possible.
+#' @param ensg (\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet supported.
 #' @param lab (\code{data.frame}). A data frame with Ensembl Gene IDs as row names and Gene Symbols in the only column.
 #' @param biomart (\code{logical}). Should Biomart be used? Defaults to \code{TRUE}.
 #' @return A character vector of Gene Symbols.
@@ -346,6 +348,10 @@ get.bm <-
 todisp2 <- function(ensg, lab=NULL, biomart=TRUE)
 {
   if (biomart) {
+    if (!length(grep("^ENS[A-Z]{0,}[0-9]{11}", ensg[1]))) {
+      cat("    Input is not Ensembl Gene IDs. Doing nothing.\n")
+      return(ensg)
+    }
     sym <- get.bm(ensg, biom.data.set="hsapiens_gene_ensembl", biom.mart="ensembl", host="www.ensembl.org", biom.filter="ensembl_gene_id", biom.attributes=c("ensembl_gene_id","hgnc_symbol"))
   } else if(!is.null(lab)) {
     cat("  Using input data frame for ID conversion...\n")
@@ -353,13 +359,27 @@ todisp2 <- function(ensg, lab=NULL, biomart=TRUE)
   } else {
     cat("  Using 'AnnotationDbi framework for ID conversion...\n")
     sym <- convertId2(ensg)
-    return(ifelse(is.na(sym), ensg, sym))
+    if (length(sym) == 1 && is.na(sym)) {
+      return(ensg)
+    } else {
+      if (length(grep("^ENS[A-Z]{0,}[0-9]{11}", sym[1]))) {
+        cat("    Input was Gene Symbol\n")
+        return(names(sym))
+      } else if(length(grep("^ENS[A-Z]{0,}[0-9]{11}", names(sym)[1]))) {
+        cat("    Input was Ensemble Gene ID\n")
+        return(as.character(sym))
+      } else {
+        return(ensg)
+      }
+    }
   }
+  cat("    Merging input IDs and converted IDs...")
   gene.lab <- merge(data.frame(ensembl_gene_id=ensg, stringsAsFactors=FALSE), sym, by="ensembl_gene_id", sort=FALSE)
+  cat("done\n")
   if (any(gene.lab$hgnc_symbol=="" | is.na(gene.lab$hgnc_symbol))) {
     cat("    Replacing", length(which(gene.lab$hgnc_symbol=="")), "missing Gene Symbols by Ensembl IDs...\n")
     replace <- gene.lab$hgnc_symbol=="" | is.na(gene.lab$hgnc_symbol)
     gene.lab$hgnc_symbol[replace] <- gene.lab$ensembl_gene_id[replace]
   }
-  gene.lab$hgnc_symbol
+  return(gene.lab$hgnc_symbol)
 }

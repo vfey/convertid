@@ -2,6 +2,9 @@
 title: CRAN package convertid
 ---
 
+## Resubmission 2021-09-
+This is a resubmission of a new release of the package. The version number was increased to 0.1.2 after making corrections to the default behavior in function `todisp2()`. The functionality has not changed but the function is more resistant to wrong user input. In addition, a new function was added, `likely_symbol`.
+
 ## Resubmission 2021-08-20
 This is a resubmission. The version was increased to 0.1.1 after addressing the comments by CRAN staff member Uwe Ligges:
 

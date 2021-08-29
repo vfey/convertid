@@ -7,7 +7,7 @@
 todisp2(ensg, lab = NULL, biomart = TRUE)
 }
 \arguments{
-\item{ensg}{(\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet possible.}
+\item{ensg}{(\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet supported.}
 
 \item{lab}{(\code{data.frame}). A data frame with Ensembl Gene IDs as row names and Gene Symbols in the only column.}
 
