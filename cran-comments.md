@@ -2,7 +2,7 @@
 title: CRAN package convertid
 ---
 
-## Resubmission 2021-09-06
+## Resubmission 2021-09-13
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.3 after correcting a bug in function `todisp2()`.  
 In addition, argument `verbose` was added to functions generating progress info messages to control their printing.
 
