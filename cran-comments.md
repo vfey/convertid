@@ -2,8 +2,40 @@
 title: CRAN package convertid
 ---
 
-## Resubmission 2021-09-
+## Resubmission 2021-09-06
+This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.3 after correcting a bug in function `todisp2()`.  
+In addition, argument `verbose` was added to functions generating progress info messages to control their printing.
+
+## Resubmission 2021-09-02
 This is a resubmission of a new release of the package. The version number was increased to 0.1.2 after making corrections to the default behavior in function `todisp2()`. The functionality has not changed but the function is more resistant to wrong user input. In addition, a new function was added, `likely_symbol`.
+
+## Notes
+Since both the local OS X check as well as the win.builder check returned NOTEs on example timings those examples were wrapped in `\dontrun{}`.  
+
+There was 1 NOTE during the local OS X check:  
+
+```
+R CMD check --as-cran convertid_0.1.2.tar.gz
+.
+* checking examples ... NOTE
+Examples with CPU (user + system) or elapsed time > 5s
+               user system elapsed
+likely_symbol 5.934  0.117   7.848
+.
+```
+
+There were 2 NOTEs during win.builder check:  
+
+```
+** running examples for arch 'i386' ... [63s] NOTE
+Examples with CPU (user + system) or elapsed time > 10s
+               user system elapsed
+likely_symbol 47.52   7.55   55.39
+** running examples for arch 'x64' ... [53s] NOTE
+Examples with CPU (user + system) or elapsed time > 10s
+              user system elapsed
+likely_symbol 35.3   7.53    43.3
+```
 
 ## Resubmission 2021-08-20
 This is a resubmission. The version was increased to 0.1.1 after addressing the comments by CRAN staff member Uwe Ligges:
@@ -34,14 +66,4 @@ For this reason, examples in these functions were wrapped in `\dontrun{}`.
 * CentOS Linux release 7.9.2009 (Core) [:core-4.1-amd64:core-4.1-noarch], R 4.0.4
 
 ## R CMD check results
-There were no ERRORs or WARNINGs.
-
-There was 1 NOTE:
-
-```
-R CMD check --as-cran convertid_0.1.0.tar.gz
-.
-* checking CRAN incoming feasibility ... NOTE     
-Maintainer: ‘Vidal Fey <vidal.fey@gmail.com>’
-.
-```
+There were no ERRORs, WARNINGs or NOTEs.

@@ -10,7 +10,8 @@ get.bm(
   biom.mart = c("ensembl", "mouse", "snp", "funcgen", "plants"),
   host = "www.ensembl.org",
   biom.filter = "ensembl_gene_id",
-  biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description")
+  biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description"),
+  verbose = FALSE
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ get.bm(
 \item{biom.filter}{\code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".}
 
 \item{biom.attributes}{\code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!}
+
+\item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
 }
 \value{
 A data frame with the retrieved information.

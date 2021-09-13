@@ -4,7 +4,7 @@
 \alias{todisp2}
 \title{Convenience Function to Convert Ensembl Gene IDs to Gene Symbols}
 \usage{
-todisp2(ensg, lab = NULL, biomart = TRUE)
+todisp2(ensg, lab = NULL, biomart = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{ensg}{(\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet supported.}
@@ -12,6 +12,8 @@ todisp2(ensg, lab = NULL, biomart = TRUE)
 \item{lab}{(\code{data.frame}). A data frame with Ensembl Gene IDs as row names and Gene Symbols in the only column.}
 
 \item{biomart}{(\code{logical}). Should Biomart be used? Defaults to \code{TRUE}.}
+
+\item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
 }
 \value{
 A character vector of Gene Symbols.
@@ -20,7 +22,7 @@ A character vector of Gene Symbols.
 \command{todisp2} uses Biomart by employing \code{get.bm} to retrieve Gene Symbols for a set of Ensembl
     Gene IDs. It is mainly meant as a fast way to convert IDs in standard gene expression analysis output to Symbols,
     e.g., for visualisation, which is why the input ID type is hard coded to ENSG IDs. If Biomart is not available
-    the functions can fall back to use \code{convertId2} or a user-provided data frame with corresponding ENSG IDs and
+    the function can fall back to use \code{convertId2} or a user-provided data frame with corresponding ENSG IDs and
     Symbols.
 }
 \examples{

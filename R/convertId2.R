@@ -217,6 +217,7 @@ convert.alias <-
 #' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
 #' @param sym.col \code{character}. Name of the column in the query result with gene symbols.
 #' @param rm.dups \code{logical}. Should duplicated input IDs (\option{biom.filter}) be removed from the result?
+#' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
 #' @details Wrapped around `get.bm`.
 #' @return  A data frame with the retrieved information.
 #' @author Vidal Fey
@@ -234,21 +235,21 @@ convert.bm <-
            biom.mart=c("ensembl", "mouse", "snp", "funcgen", "plants"),
            host="www.ensembl.org", biom.filter="ensembl_gene_id",
            biom.attributes=c("ensembl_gene_id","hgnc_symbol","description"),
-           sym.col="hgnc_symbol", rm.dups=FALSE)
+           sym.col="hgnc_symbol", rm.dups=FALSE, verbose = FALSE)
   {
     if (id=="row.names") {
       values <- rownames(dat)
     } else {
       values <- dat[[id]]
     }
-    biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes)
+    biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes, verbose = verbose)
     gene.lab <- merge(biom.ids, dat, by.x=biom.filter, by.y=id, all.y=TRUE, all.x=FALSE, sort=TRUE)
     if (rm.dups) {
-      cat("  Removing", length(which(duplicated(gene.lab[[biom.filter]]))), "duplicated row(s)...\n")
+      if (verbose) message("  Removing ", length(which(duplicated(gene.lab[[biom.filter]]))), " duplicated row(s)...")
       gene.lab <- gene.lab[!duplicated(gene.lab[[biom.filter]]), ]
     }
     if (any(gene.lab[[sym.col]]=="") || any(is.na(gene.lab[[sym.col]]))) {
-      cat("  Replacing", length(which(gene.lab[[sym.col]]=="" | is.na(gene.lab[[sym.col]]))), "missing Gene Symbols by", sQuote(biom.filter), "...\n")
+      if (verbose) message("  Replacing ", length(which(gene.lab[[sym.col]]=="" | is.na(gene.lab[[sym.col]]))), " missing Gene Symbols by", sQuote(biom.filter), "...")
       gene.lab[[sym.col]][gene.lab[[sym.col]]=="" | is.na(gene.lab[[sym.col]])] <- gene.lab[[biom.filter]][gene.lab[[sym.col]]=="" | is.na(gene.lab[[sym.col]])]
     }
     return(gene.lab)
@@ -264,6 +265,7 @@ convert.bm <-
 #' @param host \code{character} of length one. Host URL.
 #' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
 #' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
+#' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
 #' @return  A data frame with the retrieved information.
 #' @author Vidal Fey
 #' @seealso \command{\link[biomaRt]{getBM}}
@@ -282,24 +284,25 @@ get.bm <-
            host = "www.ensembl.org",
            biom.filter = "ensembl_gene_id",
            biom.attributes = c("ensembl_gene_id",
-                               "hgnc_symbol", "description"))
+                               "hgnc_symbol", "description"),
+           verbose = FALSE)
   {
     biom <- match.arg(biom.mart)
     if (biom=="plants" && host == "www.ensembl.org") {
-      cat(sQuote("Plants"), "mart requested. Setting host to", sQuote("http://plants.ensembl.org"), "...\n")
+      if (verbose) message(sQuote("Plants"), "mart requested. Setting host to ", sQuote("http://plants.ensembl.org"), "...")
       host <- "http://plants.ensembl.org"
     }
     marts <- biomaRt::listMarts(host=host)[["biomart"]]
     marts1 <- sub("mart", "", tolower(marts))
     marts1 <- unlist(lapply(strsplit(tolower(marts1), "_"), function(x) x[length(x)]))
     biom <- marts[grep(biom, marts1)]
-    cat("Using BioMart:", sQuote(biom), "\n")
+    if (verbose) message("Using BioMart: ", sQuote(biom))
     if (any(biom.data.set %in% c("human", "mouse"))) {
       biom.data.set <- match.arg(biom.data.set)
     }
     if (biom.data.set=="human") {
       if (biom=="ENSEMBL_MART_ENSEMBL") {
-        cat("Setting data set to", sQuote("hsapiens_gene_ensembl"), "...\n")
+        if (verbose) message("Setting data set to ", sQuote("hsapiens_gene_ensembl"), "...")
         biom.data.set <- "hsapiens_gene_ensembl"
       } else {
         stop("'biom.mart' needs to be 'ensembl' to use data set 'human'!")
@@ -307,21 +310,21 @@ get.bm <-
     }
     if (biom.data.set=="mouse") {
       if (biom=="ENSEMBL_MART_ENSEMBL") {
-        cat("Setting data set to", sQuote("mmusculus_gene_ensembl"), "...\n")
+        if (verbose) message("Setting data set to ", sQuote("mmusculus_gene_ensembl"), "...")
         biom.data.set <- "mmusculus_gene_ensembl"
       } else {
         stop("'biom.mart' needs to be 'ensembl' to use data set 'mouse'!")
       }
     }
 
-    cat("Input ID type is", sQuote(biom.filter), "\n")
+    if (verbose) message("Input ID type is ", sQuote(biom.filter))
     mart <- biomaRt::useDataset(dataset=biom.data.set, mart=biomaRt::useMart(biomart=biom, host=host))
 
     if (!is.list(values)) {
       values <- as.character(values)
     }
 
-    cat("  Information requested:", sQuote(setdiff(biom.attributes, biom.filter)), "...\n")
+    if (verbose) message("  Information requested: ", sQuote(setdiff(biom.attributes, biom.filter)), "...")
     biomaRt::getBM(attributes=biom.attributes, filters=biom.filter, values=values, mart=mart)
   }
 
@@ -330,11 +333,12 @@ get.bm <-
 #' @description \command{todisp2} uses Biomart by employing \code{get.bm} to retrieve Gene Symbols for a set of Ensembl
 #'     Gene IDs. It is mainly meant as a fast way to convert IDs in standard gene expression analysis output to Symbols,
 #'     e.g., for visualisation, which is why the input ID type is hard coded to ENSG IDs. If Biomart is not available
-#'     the functions can fall back to use \code{convertId2} or a user-provided data frame with corresponding ENSG IDs and
+#'     the function can fall back to use \code{convertId2} or a user-provided data frame with corresponding ENSG IDs and
 #'     Symbols.
 #' @param ensg (\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet supported.
 #' @param lab (\code{data.frame}). A data frame with Ensembl Gene IDs as row names and Gene Symbols in the only column.
 #' @param biomart (\code{logical}). Should Biomart be used? Defaults to \code{TRUE}.
+#' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
 #' @return A character vector of Gene Symbols.
 #' @seealso \command{\link[convertid]{get.bm}}
 #' @examples
@@ -345,39 +349,41 @@ get.bm <-
 #' }
 #' @keywords utilities
 #' @export
-todisp2 <- function(ensg, lab=NULL, biomart=TRUE)
+todisp2 <- function(ensg, lab=NULL, biomart=TRUE, verbose = FALSE)
 {
   if (biomart) {
     if (!length(grep("^ENS[A-Z]{0,}[0-9]{11}", ensg[1]))) {
-      cat("    Input is not Ensembl Gene IDs. Doing nothing.\n")
+      if (verbose) message("    Input is not Ensembl Gene IDs. Doing nothing.")
       return(ensg)
     }
-    sym <- get.bm(ensg, biom.data.set="hsapiens_gene_ensembl", biom.mart="ensembl", host="www.ensembl.org", biom.filter="ensembl_gene_id", biom.attributes=c("ensembl_gene_id","hgnc_symbol"))
+    sym <- get.bm(ensg, biom.data.set="hsapiens_gene_ensembl", biom.mart="ensembl", host="www.ensembl.org",
+                  biom.filter="ensembl_gene_id", biom.attributes=c("ensembl_gene_id","hgnc_symbol"),
+                  verbose = verbose)
   } else if(!is.null(lab)) {
-    cat("  Using input data frame for ID conversion...\n")
+    if (verbose) message("  Using input data frame for ID conversion...")
     sym <- data.frame(ensembl_gene_id=rownames(lab), hgnc_symbol=lab[, 1], stringsAsFactors=FALSE)
   } else {
-    cat("  Using 'AnnotationDbi framework for ID conversion...\n")
+    if (verbose) message("  Using 'AnnotationDbi framework for ID conversion...")
     sym <- convertId2(ensg)
     if (length(sym) == 1 && is.na(sym)) {
       return(ensg)
     } else {
-      if (length(grep("^ENS[A-Z]{0,}[0-9]{11}", sym[1]))) {
-        cat("    Input was Gene Symbol\n")
+      if (length(grep("^ENS[A-Z]{0,}[0-9]{11}", na.omit(sym)[1]))) {
+        if (verbose) message("    Input was Gene Symbol")
         return(names(sym))
       } else if(length(grep("^ENS[A-Z]{0,}[0-9]{11}", names(sym)[1]))) {
-        cat("    Input was Ensemble Gene ID\n")
-        return(as.character(sym))
+        if (verbose) message("    Input was Ensemble Gene ID")
+        sym <- data.frame(ensembl_gene_id=names(sym), hgnc_symbol=as.character(sym), stringsAsFactors=FALSE)
       } else {
         return(ensg)
       }
     }
   }
-  cat("    Merging input IDs and converted IDs...")
+  if (verbose) message("    Merging input IDs and converted IDs...")
   gene.lab <- merge(data.frame(ensembl_gene_id=ensg, stringsAsFactors=FALSE), sym, by="ensembl_gene_id", sort=FALSE)
-  cat("done\n")
+  if (verbose) message("done")
   if (any(gene.lab$hgnc_symbol=="" | is.na(gene.lab$hgnc_symbol))) {
-    cat("    Replacing", length(which(gene.lab$hgnc_symbol=="")), "missing Gene Symbols by Ensembl IDs...\n")
+    if (verbose) message("    Replacing ", length(which(gene.lab$hgnc_symbol=="" | is.na(gene.lab$hgnc_symbol))), " missing Gene Symbol(s) by Ensembl IDs...")
     replace <- gene.lab$hgnc_symbol=="" | is.na(gene.lab$hgnc_symbol)
     gene.lab$hgnc_symbol[replace] <- gene.lab$ensembl_gene_id[replace]
   }

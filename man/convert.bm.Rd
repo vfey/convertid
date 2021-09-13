@@ -13,7 +13,8 @@ convert.bm(
   biom.filter = "ensembl_gene_id",
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description"),
   sym.col = "hgnc_symbol",
-  rm.dups = FALSE
+  rm.dups = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ convert.bm(
 \item{sym.col}{\code{character}. Name of the column in the query result with gene symbols.}
 
 \item{rm.dups}{\code{logical}. Should duplicated input IDs (\option{biom.filter}) be removed from the result?}
+
+\item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
 }
 \value{
 A data frame with the retrieved information.

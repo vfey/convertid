@@ -44,7 +44,9 @@
 #' }
 #' @note Only fully implemented for Human for now.
 #' @examples
-#' likely_symbol(c("ABCC4", "HSPD1", "PRKDC"))
+#' \dontrun{
+#' likely_symbol(c("ABCC4", "ACPP", "KIAA1524"))
+#' }
 #' @export
 likely_symbol <-
   function(syms, alias_sym=TRUE, prev_sym=TRUE, orgnsm="human", hgnc=NULL,
@@ -64,16 +66,16 @@ likely_symbol <-
         if (is.null(hgnc_url)) {
           hgnc_url <- "ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/hgnc_complete_set.txt"
         }
-        message(paste("   :::Downloading HGNC definition file from ", sQuote(stringr::str_trunc(hgnc_url, 28, "right")), ">>> "), domain=NA, appendLF = FALSE)
+        if (verbose) message(paste("   :::Downloading HGNC definition file from ", sQuote(stringr::str_trunc(hgnc_url, 28, "right")), ">>> "), domain=NA, appendLF = FALSE)
         hgnc <- read.delim(hgnc_url)
-        message("done", domain=NA)
+        if (verbose) message("done", domain=NA)
       }
       hg <- data.frame(symbol=as.character(hgnc$symbol), alias_symbol=as.character(hgnc$alias_symbol),
                        prev_symbol=as.character(hgnc$prev_symbol), stringsAsFactors=FALSE)
     }
     dhg <- plyr::ddply(dq, "org", function(x) {
       if (unique(x$org)=="human") {
-        message(paste("  Getting symbol aliases for 'Human'..."), domain=NA)
+        if (verbose) message(paste("  Getting symbol aliases for 'Human'..."), domain=NA)
         x2 <- droplevels(x[!duplicated(x$sp), ])
         unique.sp <- unique(x2$sp)
         hgd <- plyr::ldply(1:length(unique.sp), function(y) {
@@ -187,7 +189,7 @@ likely_symbol <-
           x[, c("Material", "org.x", "sp.x", "all_symbols")]
         }
       } else if (unique(x$org)=="mouse") {
-        message(paste("  Getting symbol aliases for 'Mouse'..."), domain=NA)
+        if (verbose) message(paste("  Getting symbol aliases for 'Mouse'..."), domain=NA)
         x2 <- droplevels(x[!duplicated(x$sp), ])
         unique.sp <- unique(x2$sp)
         mx2 <- convert.alias(unique.sp, species="Mouse")
@@ -202,7 +204,7 @@ likely_symbol <-
             spx
         })
       } else if (unique(x$org)=="rat") {
-        message(paste("  Getting symbol aliases for 'Rat'... (not implemented)"), domain=NA)
+        if (verbose) message(paste("  Getting symbol aliases for 'Rat'... (not implemented)"), domain=NA)
         x$all_symbols <- x$sp
         names(x) <- c("Material", "org.x", "sp.x", "all_symbols")
         plyr::ddply(x, "sp.x", function(spx) {
@@ -213,7 +215,7 @@ likely_symbol <-
             spx
         })
       } else if (unique(x$org)=="pig") {
-        message(paste("  Getting symbol aliases for 'Pig'... (not implemented)"), domain=NA)
+        if (verbose) message(paste("  Getting symbol aliases for 'Pig'... (not implemented)"), domain=NA)
         x$all_symbols <- x$sp
         names(x) <- c("Material", "org.x", "sp.x", "all_symbols")
         plyr::ddply(x, "sp.x", function(spx) {
@@ -224,7 +226,7 @@ likely_symbol <-
             spx
         })
       } else {
-        message(paste("  Species", unique(x$org), "not found. Returning unchanged input."), domain=NA)
+        if (verbose) message(paste("  Species", unique(x$org), "not found. Returning unchanged input."), domain=NA)
         x$all_symbols <- x$sp
         names(x) <- c("Material", "org.x", "sp.x", "all_symbols")
         plyr::ddply(x, "sp.x", function(spx) {

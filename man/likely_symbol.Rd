@@ -72,5 +72,7 @@ Please note that the algorithm is very slow for large input vectors.
 Only fully implemented for Human for now.
 }
 \examples{
-likely_symbol(c("ABCC4", "HSPD1", "PRKDC"))
+\dontrun{
+likely_symbol(c("ABCC4", "ACPP", "KIAA1524"))
+}
 }
