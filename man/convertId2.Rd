@@ -15,7 +15,7 @@ convertId2(id, species = c("Human", "Mouse"))
 A named character vector where the input IDs are the names and the query results the values.
 }
 \description{
-\command{convertId2} uses the Bimap interface in AnnotationDbi to extract information from
+\command{convertId2()} uses the Bimap interface in AnnotationDbi to extract information from
     annotation packages. The function is limited to Human and Mouse annotations and is provided only as
     fallback mechanism for the most common use cases in data analysis. Please use the Biomart interface
     function \code{convert.bm()} for more flexibility.

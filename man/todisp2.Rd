@@ -19,10 +19,10 @@ todisp2(ensg, lab = NULL, biomart = TRUE, verbose = FALSE)
 A character vector of Gene Symbols.
 }
 \description{
-\command{todisp2} uses Biomart by employing \code{get.bm} to retrieve Gene Symbols for a set of Ensembl
+\command{todisp2()} uses Biomart by employing \command{get.bm()} to retrieve Gene Symbols for a set of Ensembl
     Gene IDs. It is mainly meant as a fast way to convert IDs in standard gene expression analysis output to Symbols,
     e.g., for visualisation, which is why the input ID type is hard coded to ENSG IDs. If Biomart is not available
-    the function can fall back to use \code{convertId2} or a user-provided data frame with corresponding ENSG IDs and
+    the function can fall back to use \command{convertId2()} or a user-provided data frame with corresponding ENSG IDs and
     Symbols.
 }
 \examples{

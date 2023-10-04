@@ -21,7 +21,7 @@ A \code{data.frame} with two columns:
 }
 }
 \description{
-\command{convert.alias} attempts to find all possible symbol-alias combinations for a given gene symbol, i.e.,
+\command{convert.alias()} attempts to find all possible symbol-alias combinations for a given gene symbol, i.e.,
     it assumes the input ID to be either an Alias or a Symbol and performs multiple queries to find all possible
     counterparts. The input IDs are converted to title and upper case before querying and all possibilities are tested.
     There are species presets for Human and Mouse annotations.

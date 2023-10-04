@@ -14,7 +14,7 @@ Set the location for the biomaRt cache}
 A character vector with the BIOMART_CACHE location.
 }
 \description{
-\command{.setBiomaRtCacheLocation} determines and sets the cache location
+\command{.setBiomaRtCacheLocation()} determines and sets the cache location
 used by the functions in the 'biomaRt' package and defined in the BIOMART_CACHE
 environment variable.
 If the system default cache location is under the user's home directory a sub-folder biomaRt is used.

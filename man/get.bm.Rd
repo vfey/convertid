@@ -19,7 +19,7 @@ get.bm(
 \arguments{
 \item{values}{\code{character} vector of ids to be converted.}
 
-\item{biom.data.set}{\code{character} of length one. Biomart data set to use. Defaults to 'human' (internally translated to "hsapiens_gene_ensembl" if `biom.mart="ensembl"`).}
+\item{biom.data.set}{\code{character} of length one. Biomart data set to use. Defaults to 'human' (internally translated to "hsapiens_gene_ensembl" if \code{biom.mart="ensembl"}).}
 
 \item{biom.mart}{\code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".}
 
@@ -29,9 +29,9 @@ get.bm(
 
 \item{biom.attributes}{\code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!}
 
-\item{biom.cache}{\code{character}. Path name giving the location of the cache `getBM` uses if `use.cache=TRUE`. Defaults to the value in the `BIOMART_CACHE` environment variable.}
+\item{biom.cache}{\code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.}
 
-\item{use.cache}{(\code{logical}). Should `getBM` use the cache? Defaults to \code{TRUE} as in the `getBM` function and is passed on to that.}
+\item{use.cache}{(\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.}
 
 \item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
 }
@@ -39,7 +39,7 @@ get.bm(
 A data frame with the retrieved information.
 }
 \description{
-\command{get.bm} is a user-friendly wrapper for \command{getBM} from the \emph{biomaRt} package with default
+\command{get.bm()} is a user-friendly wrapper for \command{getBM()} from the \emph{biomaRt} package with default
     settings for Human and Mouse.
 It sets all needed variables and performs the query.
 }

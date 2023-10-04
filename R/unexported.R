@@ -1,6 +1,6 @@
 #' Unexported functions
 #' Set the location for the biomaRt cache
-#' @description \command{.setBiomaRtCacheLocation} determines and sets the cache location
+#' @description \command{.setBiomaRtCacheLocation()} determines and sets the cache location
 #' used by the functions in the 'biomaRt' package and defined in the BIOMART_CACHE
 #' environment variable.
 #' If the system default cache location is under the user's home directory a sub-folder biomaRt is used.
