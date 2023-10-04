@@ -28,6 +28,7 @@
 #' @import xml2
 #' @importFrom stats na.omit
 #' @importFrom utils read.delim
+#' @importFrom rappdirs user_cache_dir
 NULL
 #' Convert Gene Symbols to Ensembl Gene IDs or vice versa
 #' @description \command{convertId2} uses the Bimap interface in AnnotationDbi to extract information from
@@ -233,7 +234,7 @@ convert.alias <-
 convert.bm <-
   function(dat, id="ID", biom.data.set = c("human", "mouse"),
            biom.mart=c("ensembl", "mouse", "snp", "funcgen", "plants"),
-           host="www.ensembl.org", biom.filter="ensembl_gene_id",
+           host="https://www.ensembl.org", biom.filter="ensembl_gene_id",
            biom.attributes=c("ensembl_gene_id","hgnc_symbol","description"),
            sym.col="hgnc_symbol", rm.dups=FALSE, verbose = FALSE)
   {
@@ -265,6 +266,8 @@ convert.bm <-
 #' @param host \code{character} of length one. Host URL.
 #' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
 #' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
+#' @param biom.cache \code{character}. Path name giving the location of the cache `getBM` uses if `use.cache=TRUE`. Defaults to the value in the `BIOMART_CACHE` environment variable.
+#' @param use.cache (\code{logical}). Should `getBM` use the cache? Defaults to \code{TRUE} as in the `getBM` function and is passed on to that.
 #' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
 #' @return  A data frame with the retrieved information.
 #' @author Vidal Fey
@@ -281,16 +284,18 @@ get.bm <-
   function(values,
            biom.data.set = c("human", "mouse"),
            biom.mart = c("ensembl", "mouse", "snp", "funcgen", "plants"),
-           host = "www.ensembl.org",
+           host = "https://www.ensembl.org",
            biom.filter = "ensembl_gene_id",
            biom.attributes = c("ensembl_gene_id",
                                "hgnc_symbol", "description"),
+           biom.cache = Sys.getenv(x = "BIOMART_CACHE"),
+           use.cache = TRUE,
            verbose = FALSE)
   {
     biom <- match.arg(biom.mart)
-    if (biom=="plants" && host == "www.ensembl.org") {
-      if (verbose) message(sQuote("Plants"), "mart requested. Setting host to ", sQuote("http://plants.ensembl.org"), "...")
-      host <- "http://plants.ensembl.org"
+    if (biom=="plants" && host == "https://www.ensembl.org") {
+      if (verbose) message(sQuote("Plants"), "mart requested. Setting host to ", sQuote("https://plants.ensembl.org"), "...")
+      host <- "https://plants.ensembl.org"
     }
     marts <- biomaRt::listMarts(host=host)[["biomart"]]
     marts1 <- sub("mart", "", tolower(marts))
@@ -324,8 +329,11 @@ get.bm <-
       values <- as.character(values)
     }
 
+    if (use.cache) {
+      .setBiomaRtCacheLocation(biom.cache)
+    }
     if (verbose) message("  Information requested: ", sQuote(setdiff(biom.attributes, biom.filter)), "...")
-    biomaRt::getBM(attributes=biom.attributes, filters=biom.filter, values=values, mart=mart)
+    biomaRt::getBM(attributes=biom.attributes, filters=biom.filter, values=values, mart=mart, useCache = use.cache)
   }
 
 #'
@@ -356,7 +364,7 @@ todisp2 <- function(ensg, lab=NULL, biomart=TRUE, verbose = FALSE)
       if (verbose) message("    Input is not Ensembl Gene IDs. Doing nothing.")
       return(ensg)
     }
-    sym <- get.bm(ensg, biom.data.set="hsapiens_gene_ensembl", biom.mart="ensembl", host="www.ensembl.org",
+    sym <- get.bm(ensg, biom.data.set="hsapiens_gene_ensembl", biom.mart="ensembl", host="https://www.ensembl.org",
                   biom.filter="ensembl_gene_id", biom.attributes=c("ensembl_gene_id","hgnc_symbol"),
                   verbose = verbose)
   } else if(!is.null(lab)) {

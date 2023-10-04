@@ -9,7 +9,7 @@ convert.bm(
   id = "ID",
   biom.data.set = c("human", "mouse"),
   biom.mart = c("ensembl", "mouse", "snp", "funcgen", "plants"),
-  host = "www.ensembl.org",
+  host = "https://www.ensembl.org",
   biom.filter = "ensembl_gene_id",
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description"),
   sym.col = "hgnc_symbol",

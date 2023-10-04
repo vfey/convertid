@@ -8,9 +8,11 @@ get.bm(
   values,
   biom.data.set = c("human", "mouse"),
   biom.mart = c("ensembl", "mouse", "snp", "funcgen", "plants"),
-  host = "www.ensembl.org",
+  host = "https://www.ensembl.org",
   biom.filter = "ensembl_gene_id",
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description"),
+  biom.cache = Sys.getenv(x = "BIOMART_CACHE"),
+  use.cache = TRUE,
   verbose = FALSE
 )
 }
@@ -26,6 +28,10 @@ get.bm(
 \item{biom.filter}{\code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".}
 
 \item{biom.attributes}{\code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!}
+
+\item{biom.cache}{\code{character}. Path name giving the location of the cache `getBM` uses if `use.cache=TRUE`. Defaults to the value in the `BIOMART_CACHE` environment variable.}
+
+\item{use.cache}{(\code{logical}). Should `getBM` use the cache? Defaults to \code{TRUE} as in the `getBM` function and is passed on to that.}
 
 \item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
 }
