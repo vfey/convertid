@@ -10,7 +10,7 @@ There were no ERRORs, WARNINGs or NOTEs.
 
 ### Test environments (2023-10-04 - )
 * local OS X install: x86_64-apple-darwin22.6.0, R 4.3.1
-* win-builder (devel and release)
+* win-builder (devel, release and oldrelease)
 * CentOS Linux release 7.9.2009 (Core) [:core-4.1-amd64:core-4.1-noarch], R 4.3.1
 
 ## Resubmission 2021-09-13
