@@ -33,8 +33,8 @@
     }
     path.ok <- .create.cache(cache.path)
     if (!path.ok) {
-      message("Using temporary cache ", sQuote(cache.path), domain = NA)
       cache.path <- file.path(tempdir(), app)
+      message("Using temporary cache ", sQuote(cache.path), domain = NA)
       path.ok <- .create.cache(cache.path)
     }
     if (path.ok) {
