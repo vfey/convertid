@@ -26,9 +26,12 @@
 #' @import stringr
 #' @import biomaRt
 #' @import xml2
+#' @importFrom BiocFileCache BiocFileCache
+#' @importFrom BiocFileCache getBFCOption
 #' @importFrom stats na.omit
 #' @importFrom utils read.delim
 #' @importFrom rappdirs user_cache_dir
+#' @importFrom methods is
 NULL
 #' Convert Gene Symbols to Ensembl Gene IDs or vice versa
 #' @description \command{convertId2()} uses the Bimap interface in AnnotationDbi to extract information from
@@ -288,10 +291,14 @@ get.bm <-
            biom.filter = "ensembl_gene_id",
            biom.attributes = c("ensembl_gene_id",
                                "hgnc_symbol", "description"),
-           biom.cache = Sys.getenv(x = "BIOMART_CACHE"),
+           biom.cache = rappdirs::user_cache_dir("biomaRt"),
            use.cache = TRUE,
            verbose = FALSE)
   {
+    if (use.cache) {
+      cache <- .setCacheLocation(cache.dir = biom.cache)
+      if (verbose) message("  Using biomaRt cache directory ", sQuote(cache))
+    }
     biom <- match.arg(biom.mart)
     if (biom=="plants" && host == "https://www.ensembl.org") {
       if (verbose) message(sQuote("Plants"), "mart requested. Setting host to ", sQuote("https://plants.ensembl.org"), "...")
@@ -329,9 +336,6 @@ get.bm <-
       values <- as.character(values)
     }
 
-    if (use.cache) {
-      .setBiomaRtCacheLocation(biom.cache)
-    }
     if (verbose) message("  Information requested: ", sQuote(setdiff(biom.attributes, biom.filter)), "...")
     biomaRt::getBM(attributes=biom.attributes, filters=biom.filter, values=values, mart=mart, useCache = use.cache)
   }

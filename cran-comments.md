@@ -2,6 +2,12 @@
 title: CRAN package convertid
 ---
 
+## Resubmission 2023-10-05
+This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.6 after addressing a bug that was was discovered shortly after submitting the previous version. The bug was related to an inconsistent cache handling in the biomaRt package. In consequence, the fixes attempt to make testing and setting the cache location more robust to failure.
+
+### R CMD check results
+There were no ERRORs, WARNINGs or NOTEs.  
+
 ## Resubmission 2023-10-04
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.5 after adding 'https://' to all host URLs to comply with Ensembl requirements. In addition, an internal function, `.setBiomaRtCacheLocation()`, was added to address a problem with the biomaRt cache on non-standard Linux installations.  
 

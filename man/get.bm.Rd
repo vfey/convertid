@@ -11,7 +11,7 @@ get.bm(
   host = "https://www.ensembl.org",
   biom.filter = "ensembl_gene_id",
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description"),
-  biom.cache = Sys.getenv(x = "BIOMART_CACHE"),
+  biom.cache = rappdirs::user_cache_dir("biomaRt"),
   use.cache = TRUE,
   verbose = FALSE
 )
