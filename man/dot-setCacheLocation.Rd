@@ -8,7 +8,7 @@ Set the location for the biomaRt cache}
 .setCacheLocation(cache.dir = rappdirs::user_cache_dir(), app = "biomaRt")
 }
 \arguments{
-\item{cache.dir}{(\code{character}). Optional user-defined path used as cache parent directory. Defaults to \code{rappdirs::user_cache_dir()}.}
+\item{cache.dir}{(\code{character}). Optional user-defined path used as cache parent directory. Defaults to \code{rappdirs::user_cache_dir()}. If a custom path is given that has to exist.}
 
 \item{app}{(\code{character}). Optional application-specific cache sub-directory, i.e., the actually used cache location. Defaults to "biomaRt".}
 }
@@ -21,7 +21,7 @@ used by the functions in the 'biomaRt' package and defined in the BIOMART_CACHE
 environment variable.
 If that variable is set and the defined location exists and is writable nothing is done.
 If the system default cache location exists and is writable a sub-folder \code{app} is used (and created if necessary).
-If not the function attempts to create \code{cache.dir} and a sub-folder \code{app}, whether or not those exist, already.
+If \code{cache.dir} exists and is writable the \code{app} folder is used (and created if necessary) there.
 If all of the above fail the function attempts to create \code{file.path(tempdir(), app)}. If tat fails, too,
 an exception is thrown.
 }
