@@ -5,18 +5,20 @@
 #' environment variable.
 #' If that variable is set and the defined location exists and is writable nothing is done.
 #' If the system default cache location exists and is writable a sub-folder \code{app} is used (and created if necessary).
-#' If \code{cache.dir} exists and is writable the \code{app} folder is used (and created if necessary) there.
+#' If the above don't work a new path is constructed from \code{cache.dir} and the \code{app} folder and an attempt is made to create that.
 #' If all of the above fail the function attempts to create \code{file.path(tempdir(), app)}. If tat fails, too,
 #' an exception is thrown.
 #' @param cache.dir (\code{character}). Optional user-defined path used as cache parent directory. Defaults to \code{rappdirs::user_cache_dir()}. If a custom path is given that has to exist.
 #' @param app (\code{character}). Optional application-specific cache sub-directory, i.e., the actually used cache location. Defaults to "biomaRt".
-#' @return A path name with the BIOMART_CACHE location.
+#' @return The value of the BIOMART_CACHE environment variable, i.e., the cache location.
 #' @seealso \code{\link[rappdirs]{user_cache_dir}}, \code{\link[BiocFileCache]{BiocFileCache}}
 #' @examples
 #' \dontrun{.setCacheLocation()}
 #' @keywords internal
 .setCacheLocation <-
   function(cache.dir = rappdirs::user_cache_dir(), app = "biomaRt") {
+    assertthat::assert_that(is.character(cache.dir), length(cache.dir) == 1L, !is.na(cache.dir),
+              is.character(app), length(app) == 1L, !is.na(app))
     if (app == basename(cache.dir)) {
       cache.dir <- dirname(cache.dir)
     }
@@ -26,15 +28,20 @@
       cache.path <- current.cache
     } else if (.cache.writable(system.cache)) {
       cache.path <- rappdirs::user_cache_dir(app)
-    } else if (.cache.writable(cache.dir)) {
-      cache.path <- file.path(cache.dir, app)
     } else {
-      cache.path <- file.path(tempdir(), app)
+      cache.path <- file.path(cache.dir, app)
     }
     path.ok <- .create.cache(cache.path)
-    if (!path.ok)
+    if (!path.ok) {
+      message("Using temporary cache ", sQuote(cache.path), domain = NA)
+      cache.path <- file.path(tempdir(), app)
+      path.ok <- .create.cache(cache.path)
+    }
+    if (path.ok) {
+      Sys.setenv(BIOMART_CACHE = cache.path)
+    } else {
       stop("Could not create cache directory. Make sure the location in 'cache.dir' is writable.")
-    Sys.setenv(BIOMART_CACHE = cache.path)
+    }
     return(path.expand(Sys.getenv(x = "BIOMART_CACHE")))
   }
 
@@ -50,6 +57,7 @@
 #' @keywords internal
 .cache.writable <-
   function(path) {
+    assertthat::assert_that(is.character(path), length(path) == 1L, !is.na(path))
     as.logical(file.access(path)+1) &&
       as.logical(file.access(path, 2)+1)
   }
@@ -66,7 +74,10 @@
 #' \dontrun{.create.cache(rappdirs::user_cache_dir("biomaRt"))}
 #' @keywords internal
 .create.cache <-
-  function(cache.path = BiocFileCache::getBFCOption("CACHE")) {
-    cache.ok <- try(BiocFileCache::BiocFileCache(cache.path, ask = FALSE), silent = TRUE)
-    return(!is(cache.ok, "try-error"))
+  function(cache.path = rappdirs::user_cache_dir("biomaRt")) {
+    assertthat::assert_that(is.character(cache.path), length(cache.path) == 1L, !is.na(cache.path))
+    if (!file.exists(cache.path)) {
+      dir.create(cache.path, recursive = TRUE, showWarnings = FALSE)
+    }
+    .cache.writable(cache.path)
   }

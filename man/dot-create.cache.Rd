@@ -5,7 +5,7 @@
 \title{Unexported functions
 Create and initialise a BioC cache at a given location.}
 \usage{
-.create.cache(cache.path = BiocFileCache::getBFCOption("CACHE"))
+.create.cache(cache.path = rappdirs::user_cache_dir("biomaRt"))
 }
 \arguments{
 \item{cache.path}{(\code{character}). The path to use for the cached files.}

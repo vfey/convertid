@@ -13,7 +13,7 @@ Set the location for the biomaRt cache}
 \item{app}{(\code{character}). Optional application-specific cache sub-directory, i.e., the actually used cache location. Defaults to "biomaRt".}
 }
 \value{
-A path name with the BIOMART_CACHE location.
+The value of the BIOMART_CACHE environment variable, i.e., the cache location.
 }
 \description{
 \command{.setBiomaRtCacheLocation()} attempts to set the cache location
@@ -21,7 +21,7 @@ used by the functions in the 'biomaRt' package and defined in the BIOMART_CACHE
 environment variable.
 If that variable is set and the defined location exists and is writable nothing is done.
 If the system default cache location exists and is writable a sub-folder \code{app} is used (and created if necessary).
-If \code{cache.dir} exists and is writable the \code{app} folder is used (and created if necessary) there.
+If the above don't work a new path is constructed from \code{cache.dir} and the \code{app} folder and an attempt is made to create that.
 If all of the above fail the function attempts to create \code{file.path(tempdir(), app)}. If tat fails, too,
 an exception is thrown.
 }

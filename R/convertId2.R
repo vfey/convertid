@@ -26,12 +26,10 @@
 #' @import stringr
 #' @import biomaRt
 #' @import xml2
-#' @importFrom BiocFileCache BiocFileCache
-#' @importFrom BiocFileCache getBFCOption
+#' @importFrom assertthat assert_that
 #' @importFrom stats na.omit
 #' @importFrom utils read.delim
 #' @importFrom rappdirs user_cache_dir
-#' @importFrom methods is
 NULL
 #' Convert Gene Symbols to Ensembl Gene IDs or vice versa
 #' @description \command{convertId2()} uses the Bimap interface in AnnotationDbi to extract information from

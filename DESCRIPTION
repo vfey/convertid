@@ -13,7 +13,7 @@ Description: Gene Symbols or Ensembl Gene IDs are converted using the Bimap inte
     can be set by the user. Function convert.alias() converts Gene Symbols to Aliases and vice versa and function likely_symbol()
     attempts to determine the most likely current Gene Symbol.
 Depends: AnnotationDbi
-Imports: org.Hs.eg.db, org.Mm.eg.db, plyr, stringr, biomaRt, stats, xml2, utils, rappdirs, BiocFileCache, methods
+Imports: org.Hs.eg.db, org.Mm.eg.db, plyr, stringr, biomaRt, stats, xml2, utils, rappdirs, assertthat
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 7.2.3
