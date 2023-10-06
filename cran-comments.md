@@ -2,7 +2,7 @@
 title: CRAN package convertid
 ---
 
-## Resubmission 2023-10-05
+## Resubmission 2023-10-06
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.6 after addressing a bug that was was discovered shortly after submitting the previous version. The bug was related to an inconsistent cache handling in the biomaRt package. In consequence, the fixes attempt to make testing and setting the cache location more robust to failure.
 
 ### R CMD check results
