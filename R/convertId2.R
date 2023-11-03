@@ -26,10 +26,13 @@
 #' @import stringr
 #' @import biomaRt
 #' @import xml2
+#' @importFrom methods is
 #' @importFrom assertthat assert_that
 #' @importFrom stats na.omit
 #' @importFrom utils read.delim
 #' @importFrom rappdirs user_cache_dir
+#' @importFrom BiocFileCache BiocFileCache bfcadd bfcquery
+#' @importFrom httr config set_config set_cookies GET timeout
 NULL
 #' Convert Gene Symbols to Ensembl Gene IDs or vice versa
 #' @description \command{convertId2()} uses the Bimap interface in AnnotationDbi to extract information from
@@ -302,7 +305,9 @@ get.bm <-
       if (verbose) message(sQuote("Plants"), "mart requested. Setting host to ", sQuote("https://plants.ensembl.org"), "...")
       host <- "https://plants.ensembl.org"
     }
-    marts <- biomaRt::listMarts(host=host)[["biomart"]]
+    if (verbose) message("Getting CURL SSL options for securely contacting host ", sQuote(host), "...")
+    httr_config <- .get.httr_config(host = host, use.cache = use.cache)
+    marts <- biomaRt::listMarts(host=host, httr_config=httr_config)[["biomart"]]
     marts1 <- sub("mart", "", tolower(marts))
     marts1 <- unlist(lapply(strsplit(tolower(marts1), "_"), function(x) x[length(x)]))
     biom <- marts[grep(biom, marts1)]

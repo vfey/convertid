@@ -3,7 +3,7 @@
 \name{.create.cache}
 \alias{.create.cache}
 \title{Unexported functions
-Create and initialise a BioC cache at a given location.}
+Create a file cache directory at a given location.}
 \usage{
 .create.cache(cache.path = rappdirs::user_cache_dir("biomaRt"))
 }
@@ -14,14 +14,13 @@ Create and initialise a BioC cache at a given location.}
 TRUE if the location was successfully set up, FALSE if not.
 }
 \description{
-\command{.create.cache()} uses \command{BiocFileCache::BiocFileCache()} to set up
-a BioC file cache at a location defined by the user. See the \command{BiocFileCache} package
-for more information.
+\command{.create.cache()} attempts to create a cache directory based on a given path name. Typically, such path
+is specific to the package from within the function is called. The default settings refer to the file cache framework in the \emph{\code{biomaRt}} package.
 }
 \examples{
 \dontrun{.create.cache(rappdirs::user_cache_dir("biomaRt"))}
 }
 \seealso{
-\code{\link[BiocFileCache]{BiocFileCache}}
+\code{\link[rappdirs]{user_cache_dir}}
 }
 \keyword{internal}

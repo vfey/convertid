@@ -3,7 +3,7 @@
 \name{.setCacheLocation}
 \alias{.setCacheLocation}
 \title{Unexported functions
-Set the location for the biomaRt cache}
+Set the location for the \emph{\code{biomaRt}} cache}
 \usage{
 .setCacheLocation(cache.dir = rappdirs::user_cache_dir(), app = "biomaRt")
 }
@@ -17,7 +17,7 @@ The value of the BIOMART_CACHE environment variable, i.e., the cache location.
 }
 \description{
 \command{.setBiomaRtCacheLocation()} attempts to set the cache location
-used by the functions in the 'biomaRt' package and defined in the BIOMART_CACHE
+used by the functions in the \emph{\code{biomaRt}} package and defined in the BIOMART_CACHE
 environment variable.
 If that variable is set and the defined location exists and is writable nothing is done.
 If the system default cache location exists and is writable a sub-folder \code{app} is used (and created if necessary).

@@ -1,7 +1,7 @@
 #' Unexported functions
-#' Set the location for the biomaRt cache
+#' Set the location for the \emph{\code{biomaRt}} cache
 #' @description \command{.setBiomaRtCacheLocation()} attempts to set the cache location
-#' used by the functions in the 'biomaRt' package and defined in the BIOMART_CACHE
+#' used by the functions in the \emph{\code{biomaRt}} package and defined in the BIOMART_CACHE
 #' environment variable.
 #' If that variable is set and the defined location exists and is writable nothing is done.
 #' If the system default cache location exists and is writable a sub-folder \code{app} is used (and created if necessary).
@@ -63,13 +63,12 @@
   }
 
 #' Unexported functions
-#' Create and initialise a BioC cache at a given location.
-#' @description \command{.create.cache()} uses \command{BiocFileCache::BiocFileCache()} to set up
-#' a BioC file cache at a location defined by the user. See the \command{BiocFileCache} package
-#' for more information.
+#' Create a file cache directory at a given location.
+#' @description \command{.create.cache()} attempts to create a cache directory based on a given path name. Typically, such path
+#' is specific to the package from within the function is called. The default settings refer to the file cache framework in the \emph{\code{biomaRt}} package.
 #' @param cache.path (\code{character}). The path to use for the cached files.
 #' @return TRUE if the location was successfully set up, FALSE if not.
-#' @seealso \code{\link[BiocFileCache]{BiocFileCache}}
+#' @seealso \code{\link[rappdirs]{user_cache_dir}}
 #' @examples
 #' \dontrun{.create.cache(rappdirs::user_cache_dir("biomaRt"))}
 #' @keywords internal
@@ -77,7 +76,58 @@
   function(cache.path = rappdirs::user_cache_dir("biomaRt")) {
     assertthat::assert_that(is.character(cache.path), length(cache.path) == 1L, !is.na(cache.path))
     if (!file.exists(cache.path)) {
-      dir.create(cache.path, recursive = TRUE, showWarnings = FALSE)
+      return(dir.create(cache.path, recursive = TRUE, showWarnings = FALSE))
+    } else {
+      .cache.writable(cache.path)
     }
-    .cache.writable(cache.path)
+  }
+
+#' Unexported functions
+#' Get httr configuration, i.e., current CURL options for data fetching functions.
+#' @description \command{.get.httr_config()} retrieves the current CURL options and in particular tests and gets
+#' the options used with \emph{"^https://.*ensembl.org"} URLs. The code was partly copied from \code{\link[biomaRt]{listMarts}()}.
+#' @param httr_config (\code{list}). A R object of class \code{request} listing current CURL options. Missing (and meant to be created) by default.
+#' @param host (\code{character}) Host URL.
+#' @param use.cache (\code{logical}) Should \emph{\code{biomaRt}} functions use the cache? Defaults to \code{TRUE}.
+#' @return A R object of class \code{request} listing current CURL options.
+#' @seealso \code{\link[httr]{config}}
+#' @examples
+#' \dontrun{.get.httr_config()}
+#' @keywords internal
+.get.httr_config <-
+  function(httr_config, host="https://www.ensembl.org", use.cache = TRUE) {
+    if (grepl(pattern = "^https://.*ensembl.org", x = host) && missing(httr_config)) {
+      httr_config <- .get.Ensembl_config(use.cache = use.cache)
+    }
+    if (missing(httr_config)) {
+      httr_config <- httr::config()
+    }
+    return(httr_config)
+  }
+
+#' Unexported functions
+#' Test and retrieve Ensembl-specific CURL SSL configuration.
+#' @description \command{.get.Ensembl_config()} tests and gets CURL options used with \emph{"^https://.*ensembl.org"} URLs.
+#' The function is a modified version of \code{.getEnsemblSSL} from the \emph{\code{biomaRt}} package.
+#' @param use.cache (\code{logical}) Should \emph{\code{biomaRt}} functions use the cache? Defaults to \code{TRUE}.
+#' @return A R object of class \code{request} listing current CURL options.
+#' @seealso \code{\link[httr]{config}}
+#' @examples
+#' \dontrun{.get.Ensembl_config()}
+#' @keywords internal
+.get.Ensembl_config <-
+  function (use.cache = TRUE) {
+    if (use.cache) {
+      cache <- .biomartCacheLocation()
+      bfc <- BiocFileCache::BiocFileCache(cache, ask = FALSE)
+      if (.checkInCache(bfc, hash = "ensembl-ssl-settings")) {
+        ensembl_config <- .readFromCache(bfc, "ensembl-ssl-settings")
+      } else {
+        ensembl_config <- .checkEnsemblSSL()
+        .addToCache(bfc, ensembl_config, hash = "ensembl-ssl-settings")
+      }
+    } else {
+      ensembl_config <- .checkEnsemblSSL()
+    }
+    return(ensembl_config)
   }
