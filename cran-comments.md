@@ -5,6 +5,9 @@ title: CRAN package convertid
 ## Resubmission 2023-11-04
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.7 after addressing a bug related to *dbplyr's* database input/output framework. The fix implements a workaround allowing the user to optionally disable the use of the Bioc file cache when getting/setting CURL SSL options which in turn requires *dbplyr*.
 
+### R CMD check results
+There were no ERRORs, WARNINGs or NOTEs.  
+
 ### Test environments (2023-11-04 - )
 * local OS X install: x86_64-apple-darwin22.6.0, R 4.3.1
 * win-builder (devel, release and oldrelease)
