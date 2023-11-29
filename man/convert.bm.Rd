@@ -12,6 +12,8 @@ convert.bm(
   host = "https://www.ensembl.org",
   biom.filter = "ensembl_gene_id",
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description"),
+  biom.cache = rappdirs::user_cache_dir("biomaRt"),
+  use.cache = TRUE,
   sym.col = "hgnc_symbol",
   rm.dups = FALSE,
   verbose = FALSE
@@ -31,6 +33,10 @@ convert.bm(
 \item{biom.filter}{\code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".}
 
 \item{biom.attributes}{\code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!}
+
+\item{biom.cache}{\code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.}
+
+\item{use.cache}{(\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.}
 
 \item{sym.col}{\code{character}. Name of the column in the query result with gene symbols.}
 

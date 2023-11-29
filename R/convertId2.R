@@ -220,6 +220,8 @@ convert.alias <-
 #' @param host \code{character} of length one. Host URL.
 #' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
 #' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
+#' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
+#' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
 #' @param sym.col \code{character}. Name of the column in the query result with gene symbols.
 #' @param rm.dups \code{logical}. Should duplicated input IDs (\option{biom.filter}) be removed from the result?
 #' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
@@ -240,14 +242,16 @@ convert.bm <-
            biom.mart=c("ensembl", "mouse", "snp", "funcgen", "plants"),
            host="https://www.ensembl.org", biom.filter="ensembl_gene_id",
            biom.attributes=c("ensembl_gene_id","hgnc_symbol","description"),
-           sym.col="hgnc_symbol", rm.dups=FALSE, verbose = FALSE)
+           biom.cache = rappdirs::user_cache_dir("biomaRt"),
+           use.cache = TRUE, sym.col="hgnc_symbol", rm.dups=FALSE,
+           verbose = FALSE)
   {
     if (id=="row.names") {
       values <- rownames(dat)
     } else {
       values <- dat[[id]]
     }
-    biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes, verbose = verbose)
+    biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes, biom.cache, use.cache, verbose = verbose)
     gene.lab <- merge(biom.ids, dat, by.x=biom.filter, by.y=id, all.y=TRUE, all.x=FALSE, sort=TRUE)
     if (rm.dups) {
       if (verbose) message("  Removing ", length(which(duplicated(gene.lab[[biom.filter]]))), " duplicated row(s)...")
