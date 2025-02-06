@@ -2,8 +2,10 @@
 
 ## from 'caching.R':
 
+#' Add values to cache
 #' @param bfc Object of class BiocFileCache, created by a call to
 #' BiocFileCache::BiocFileCache()
+#' @param result character; name of the file written to chache
 #' @param hash unique hash representing a query.
 .addToCache <- function(bfc, result, hash) {
 
@@ -27,6 +29,7 @@
   return(invisible(res))
 }
 
+#' Read values from cache
 #' @param bfc Object of class BiocFileCache, created by a call to
 #' BiocFileCache::BiocFileCache()
 #' @param hash unique hash representing a query.
@@ -43,9 +46,11 @@
   }
 }
 
+#' Check whether value in cache exists
 #' @param bfc Object of class BiocFileCache, created by a call to
 #' BiocFileCache::BiocFileCache()
 #' @param hash unique hash representing a query.
+#' @param verbose logical; should additional verbose output be printed? Not currently used.
 #'
 #' This function returns TRUE if a record with the requested hash already
 #' exists in the file cache, otherwise returns FALSE.

@@ -2,6 +2,7 @@
 % Please edit documentation in R/convertId2.R
 \docType{package}
 \name{convertid}
+\alias{convertid-package}
 \alias{convertid}
 \title{Convert Gene IDs Between Each Other and Fetch Annotations from Biomart}
 \description{
@@ -26,4 +27,5 @@ LazyLoad: \tab yes\cr
 Vidal Fey <vidal.fey@gmail.com>
 Maintainer: Vidal Fey <vidal.fey@gmail.com>
 }
+\keyword{internal}
 \keyword{package}
