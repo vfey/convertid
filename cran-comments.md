@@ -10,6 +10,9 @@ This is a resubmission of a maintenance release of the package. The version numb
 * win-builder (devel, release and oldrelease)
 * Red Hat Enterprise Linux release 9.5 (Plow), R 4.4.2
 
+### R CMD check results
+There were no ERRORs, WARNINGs or NOTEs.  
+
 ## Resubmission 2023-11-29
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.8 after addressing a bug in function `convert.bm` related to the cache functionality in the __biomaRt__ package.
 
