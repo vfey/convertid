@@ -2,6 +2,14 @@
 title: CRAN package convertid
 ---
 
+## Resubmission 2025-02-06
+This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.9 after adapting to an argument name change in the __biomaRt__ package.
+
+### Test environments (2025-02-06 - )
+* local OS X install: x86_64-apple-darwin24.2.0, R 4.4.2
+* win-builder (devel, release and oldrelease)
+* Red Hat Enterprise Linux release 9.2 (Plow), R 4.3.1
+
 ## Resubmission 2023-11-29
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.8 after addressing a bug in function `convert.bm` related to the cache functionality in the __biomaRt__ package.
 
