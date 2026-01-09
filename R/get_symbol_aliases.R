@@ -15,7 +15,7 @@
 #' @param hgnc (\code{data.frame}). An optional data frame with the needed HGNC annotations. (Needs to match the format
 #'     available at \code{hgnc_utl}!)
 #' @param hgnc_url (\code{character}). URL where to download the HGNC annotation dataset. Defaults to
-#'     \code{"ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/hgnc_complete_set.txt"}.
+#'     \code{"https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt"}.
 #' @param output (\code{character}). One of "likely", "symbols" and "all". Determines the scope of the output data frame.
 #'     Defaults to \code{"likely"} which will return the inout Symbol and the determined likely Symbol.
 #' @param verbose (\code{logical}). Should messages be written to the console? Defaults to \code{TRUE}.
@@ -64,9 +64,9 @@ likely_symbol <-
     if (orgnsm=="human") {
       if (is.null(hgnc)) {
         if (is.null(hgnc_url)) {
-          hgnc_url <- "ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/hgnc_complete_set.txt"
+          hgnc_url <- "https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt"
         }
-        if (verbose) message(paste("   :::Downloading HGNC definition file from ", sQuote(stringr::str_trunc(hgnc_url, 28, "right")), ">>> "), domain=NA, appendLF = FALSE)
+        if (verbose) message(paste("   :::Downloading HGNC definition file from ", sQuote(stringr::str_trunc(hgnc_url, 28, "right")), "> "), domain=NA, appendLF = FALSE)
         hgnc <- read.delim(hgnc_url)
         if (verbose) message("done", domain=NA)
       }
@@ -75,7 +75,7 @@ likely_symbol <-
     }
     dhg <- plyr::ddply(dq, "org", function(x) {
       if (unique(x$org)=="human") {
-        if (verbose) message(paste("  Getting symbol aliases for 'Human'..."), domain=NA)
+        if (verbose) message(paste("   > Getting symbol aliases for 'Human'..."), domain=NA)
         x2 <- droplevels(x[!duplicated(x$sp), ])
         unique.sp <- unique(x2$sp)
         hgd <- plyr::ldply(1:length(unique.sp), function(y) {
@@ -127,11 +127,14 @@ likely_symbol <-
             })
             if (length(unlist(hga3))) {
               hga3 <- do.call("rbind", hga3)
+              previous_sym <- hga3$prev_symbol
             } else {
               hga3 <- NULL
+              previous_sym <- ""
             }
           } else {
             hga3 <- NULL
+            previous_sym <- ""
           }
           if (is.null(hga2)) {
             hga2_123 <- NULL
@@ -170,11 +173,12 @@ likely_symbol <-
           } else {
             likely_sym <- as1
           }
-          data.frame(current_sym=current_sym, likely_sym=likely_sym, all_symbols=paste(sort(hga123), collapse="|"), stringsAsFactors = FALSE)
+          data.frame(current_sym=current_sym, likely_sym=likely_sym, previous_sym=previous_sym, all_symbols=paste(sort(hga123), collapse="|"), stringsAsFactors = FALSE)
         })
         x2$all_symbols <- hgd$all_symbols
         x2$current_symbols <- hgd$current_sym
         x2$likely_symbol <- hgd$likely_sym
+        x2$previous_symbol <- hgd$previous_sym
         x <- merge(x, x2, by="Material", all.x=TRUE)
         x <- plyr::ddply(x, "sp.x", function(spx) {
           spx$all_symbols[is.na(spx$all_symbols)] <- spx$all_symbols[!is.na(spx$all_symbols)][1]
@@ -240,17 +244,22 @@ likely_symbol <-
     })
     output <- match.arg(output)
     if (orgnsm=="human") {
-      dhg <- dhg[, c("Material", "org.x", "current_symbols", "likely_symbol", "sp.x", "all_symbols")]
-      names(dhg) <- c("orig_input", "organism", "current_symbols", "likely_symbol", "input_symbol", "all_symbols")
+      dhg <- dhg[, c("Material", "org.x", "current_symbols", "likely_symbol", "previous_symbol", "sp.x", "all_symbols")]
+      names(dhg) <- c("orig_input", "organism", "current_symbols", "likely_symbol", "previous_symbol", "input_symbol", "all_symbols")
       if (output == "likely") {
+        cat("\n\n")
         return(dhg[, c("likely_symbol", "input_symbol")])
       } else if (output == "symbols") {
+        cat("\n\n")
         return(dhg[, c("current_symbols", "likely_symbol", "input_symbol", "all_symbols")])
-      } else {
+      } else if (output == "all") {
+        cat("\n\n")
+        return(dhg[, c("current_symbols", "likely_symbol", "previous_symbol", "input_symbol", "all_symbols")])
       }
     } else {
       dhg <- dhg[, c("Material", "org.x", "sp.x", "all_symbols")]
       names(dhg) <- c("orig_input", "organism", "input_symbol", "all_symbols")
+      cat("\n\n")
+      return(dhg)
     }
-    return(dhg)
   }

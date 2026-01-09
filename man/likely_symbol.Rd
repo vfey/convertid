@@ -28,7 +28,7 @@ likely_symbol(
 available at \code{hgnc_utl}!)}
 
 \item{hgnc_url}{(\code{character}). URL where to download the HGNC annotation dataset. Defaults to
-\code{"ftp://ftp.ebi.ac.uk/pub/databases/genenames/new/tsv/hgnc_complete_set.txt"}.}
+\code{"https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt"}.}
 
 \item{output}{(\code{character}). One of "likely", "symbols" and "all". Determines the scope of the output data frame.
 Defaults to \code{"likely"} which will return the inout Symbol and the determined likely Symbol.}

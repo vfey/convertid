@@ -5,6 +5,7 @@ title: CRAN package convertid
 ## Resubmission 2026-01-09
 This is a resubmission of a maintenance release of the package to address a request by the CRAN team regarding strong dependencies on Bioconductor annotation packages.
 Strong dependencies were removed and those packages are now checked at runtime using requireNamespace(), returning an error message to the user if not installed.
+In addition, the default URL to download HGNC gene definitions was updated.
 
 ### Test environments (2026-01-09 - )
 * local OS X install: aarch64-apple-darwin25.2.0, R 4.5.2
