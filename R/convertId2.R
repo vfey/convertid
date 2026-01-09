@@ -20,8 +20,6 @@
 #' @keywords package
 #' @keywords internal
 "_PACKAGE"
-#' @import org.Hs.eg.db
-#' @import org.Mm.eg.db
 #' @import AnnotationDbi
 #' @import plyr
 #' @import stringr
@@ -53,17 +51,39 @@ convertId2 <-
   {
     species <- match.arg(species)
     if (species == "Human") {
-      ensg2eg.env <- org.Hs.eg.db::org.Hs.egENSEMBL2EG
-      sym.env <- org.Hs.eg.db::org.Hs.egSYMBOL
-      sym2eg.env <- org.Hs.eg.db::org.Hs.egSYMBOL2EG
-      ensg.env <- org.Hs.eg.db::org.Hs.egENSEMBL
+      if (!requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+        stop(
+          "The Bioconductor package 'org.Hs.eg.db' is required for this function.\n",
+          "Install it via BiocManager::install('org.Hs.eg.db').",
+          call. = FALSE
+        )
+      }
+      # Get the namespace without using ::
+      orgdb <- getNamespace("org.Hs.eg.db")
+
+      # Access the objects inside the namespace
+      ensg2eg.env <- orgdb[["org.Hs.egENSEMBL2EG"]]
+      sym.env    <- orgdb[["org.Hs.egSYMBOL"]]
+      sym2eg.env <- orgdb[["org.Hs.egSYMBOL2EG"]]
+      ensg.env   <- orgdb[["org.Hs.egENSEMBL"]]
       ensg <- "ENSG"
     }
     if (species == "Mouse") {
-      ensg2eg.env <- org.Mm.eg.db::org.Mm.egENSEMBL2EG
-      sym.env <- org.Mm.eg.db::org.Mm.egSYMBOL
-      sym2eg.env <- org.Mm.eg.db::org.Mm.egSYMBOL2EG
-      ensg.env <- org.Mm.eg.db::org.Mm.egENSEMBL
+      if (!requireNamespace("org.Mm.eg.db", quietly = TRUE)) {
+        stop(
+          "The Bioconductor package 'org.Mm.eg.db' is required for this function.\n",
+          "Install it via BiocManager::install('org.Mm.eg.db').",
+          call. = FALSE
+        )
+      }
+      # Get the namespace without using ::
+      orgdb <- getNamespace("org.Mm.eg.db")
+
+      # Access the objects inside the namespace
+      ensg2eg.env <- orgdb[["org.Mm.egENSEMBL2EG"]]
+      sym.env    <- orgdb[["org.Mm.egSYMBOL"]]
+      sym2eg.env <- orgdb[["org.Mm.egSYMBOL2EG"]]
+      ensg.env   <- orgdb[["org.Mm.egENSEMBL"]]
       ensg <- "ENSMU"
     }
     if (length(id) == 1) {
@@ -180,9 +200,21 @@ convert.alias <-
       stop("Need input ID vector!")
     if (is.null(db)) {
       species <- match.arg(species)
+      if (!requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+        stop(
+          "The Bioconductor package 'org.Hs.eg.db' is required for this function.\n",
+          "Install it via BiocManager::install('org.Hs.eg.db').",
+          call. = FALSE
+        )
+      }
+      # Get the namespace without using ::
+      orgdb <- switch(species,
+                      Human=getNamespace("org.Hs.eg.db"),
+                      Mouse=getNamespace("org.Mm.eg.db")
+      )
       db <- switch(species,
-                   Human=org.Hs.eg.db::org.Hs.eg.db,
-                   Mouse=org.Mm.eg.db::org.Mm.eg.db
+                   Human=orgdb[["org.Hs.eg.db"]],
+                   Mouse=orgdb[["org.Mm.eg.db"]]
       )
     }
     syms <- plyr::ldply(id, function(i) {

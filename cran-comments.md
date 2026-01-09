@@ -2,13 +2,22 @@
 title: CRAN package convertid
 ---
 
+## Resubmission 2026-01-09
+This is a resubmission of a maintenance release of the package to address a request by the CRAN team regarding strong dependencies on Bioconductor annotation packages.
+Strong dependencies were removed and those packages are now checked at runtime using requireNamespace(), returning an error message to the user if not installed.
+
+### Test environments (2026-01-09 - )
+* local OS X install: aarch64-apple-darwin25.2.0, R 4.5.2
+* win-builder (devel, release and oldrelease)
+* Red Hat Enterprise Linux release 9.7 (Plow), R 4.5.2
+
 ## Resubmission 2025-02-06
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.10 after correcting the Date field in the DESCRIPTION file.  
 
 ## Resubmission 2025-02-06
 This is a resubmission of a maintenance release of the package. The version number was increased to 0.1.9 after adapting to an argument name change in the __biomaRt__ package. In addition, "check" warnings were addressed by completing or updating the documentation.  
 
-### Test environments (2025-02-06 - )
+### Test environments (2025-02-06)
 * local OS X install: x86_64-apple-darwin24.2.0, R 4.4.2
 * win-builder (devel, release and oldrelease)
 * Red Hat Enterprise Linux release 9.5 (Plow), R 4.4.2
