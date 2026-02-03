@@ -384,7 +384,7 @@ get.bm <-
 #' Convenience Function to Convert Ensembl Gene IDs to Gene Symbols
 #' @description \command{todisp2()} uses Biomart by employing \command{get.bm()} to retrieve Gene Symbols for a set of Ensembl
 #'     Gene IDs. It is mainly meant as a fast way to convert IDs in standard gene expression analysis output to Symbols,
-#'     e.g., for visualisation, which is why the input ID type is hard coded to ENSG IDs. If Biomart is not available
+#'     e.g., for visualisation, which is why the input ID type is hard-coded to ENSG IDs. If Biomart is not available
 #'     the function can fall back to use \command{convertId2()} or a user-provided data frame with corresponding ENSG IDs and
 #'     Symbols.
 #' @param ensg (\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet supported.
@@ -397,6 +397,7 @@ get.bm <-
 #' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
 #' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
 #' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
+#' @param keep.original (\code{logical}). Should the order and length of the input vector be preserved, i.e., should also IDs missing after conversion be kept? Defaults to \code{TRUE}.
 #' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
 #' @return A character vector of Gene Symbols.
 #' @seealso \command{\link[convertid]{get.bm}}
@@ -418,6 +419,7 @@ todisp2 <- function(ensg,
                     biom.attributes = c("ensembl_gene_id", "hgnc_symbol"),
                     biom.cache = rappdirs::user_cache_dir("biomaRt"),
                     use.cache = TRUE,
+                    keep.original = TRUE,
                     verbose = FALSE)
 {
   if (biomart) {
@@ -450,7 +452,12 @@ todisp2 <- function(ensg,
     }
   }
   if (verbose) message("    Merging input IDs and converted IDs...")
-  gene.lab <- merge(data.frame(ensembl_gene_id=ensg, stringsAsFactors=FALSE), sym, by="ensembl_gene_id", sort=FALSE)
+  if (keep.original) {
+    gene.lab <- merge(data.frame(ensembl_gene_id=ensg, stringsAsFactors=FALSE), sym, by="ensembl_gene_id", all.x = TRUE, sort=FALSE)
+    gene.lab <- gene.lab[match(ensg, gene.lab$ensembl_gene_id), ]
+  } else {
+    gene.lab <- merge(data.frame(ensembl_gene_id=ensg, stringsAsFactors=FALSE), sym, by="ensembl_gene_id", sort=FALSE)
+  }
   if (verbose) message("done")
   if (any(gene.lab$hgnc_symbol=="" | is.na(gene.lab$hgnc_symbol))) {
     if (verbose) message("    Replacing ", length(which(gene.lab$hgnc_symbol=="" | is.na(gene.lab$hgnc_symbol))), " missing Gene Symbol(s) by Ensembl IDs...")

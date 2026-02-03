@@ -2,6 +2,11 @@
 title: CRAN package convertid
 ---
 
+## Resubmission 2026-02-04
+This is a resubmission of a maintenance release of the package adding a planned feature.
+The function was updated to allow the user to choose whether input IDs that are missing after conversion should be retained in the output vector.
+The version number was increased to 0.2.1.  
+
 ## Resubmission 2026-02-03
 This is a resubmission of a maintenance release of the package to address an error when accessing biomart through the 'todisp2()' function related to cache handling.
 The function was updated to offer the same flexibility as the internally used biomart calling function allowing to avoid the error.

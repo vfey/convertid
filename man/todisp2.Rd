@@ -15,6 +15,7 @@ todisp2(
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol"),
   biom.cache = rappdirs::user_cache_dir("biomaRt"),
   use.cache = TRUE,
+  keep.original = TRUE,
   verbose = FALSE
 )
 }
@@ -39,6 +40,8 @@ todisp2(
 
 \item{use.cache}{(\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.}
 
+\item{keep.original}{(\code{logical}). Should the order and length of the input vector be preserved, i.e., should also IDs missing after conversion be kept? Defaults to \code{TRUE}.}
+
 \item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
 }
 \value{
@@ -47,7 +50,7 @@ A character vector of Gene Symbols.
 \description{
 \command{todisp2()} uses Biomart by employing \command{get.bm()} to retrieve Gene Symbols for a set of Ensembl
     Gene IDs. It is mainly meant as a fast way to convert IDs in standard gene expression analysis output to Symbols,
-    e.g., for visualisation, which is why the input ID type is hard coded to ENSG IDs. If Biomart is not available
+    e.g., for visualisation, which is why the input ID type is hard-coded to ENSG IDs. If Biomart is not available
     the function can fall back to use \command{convertId2()} or a user-provided data frame with corresponding ENSG IDs and
     Symbols.
 }
