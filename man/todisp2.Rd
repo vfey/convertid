@@ -4,7 +4,19 @@
 \alias{todisp2}
 \title{Convenience Function to Convert Ensembl Gene IDs to Gene Symbols}
 \usage{
-todisp2(ensg, lab = NULL, biomart = TRUE, verbose = FALSE)
+todisp2(
+  ensg,
+  lab = NULL,
+  biomart = TRUE,
+  biom.data.set = "hsapiens_gene_ensembl",
+  biom.mart = "ensembl",
+  host = "https://www.ensembl.org",
+  biom.filter = "ensembl_gene_id",
+  biom.attributes = c("ensembl_gene_id", "hgnc_symbol"),
+  biom.cache = rappdirs::user_cache_dir("biomaRt"),
+  use.cache = TRUE,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{ensg}{(\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet supported.}
@@ -12,6 +24,20 @@ todisp2(ensg, lab = NULL, biomart = TRUE, verbose = FALSE)
 \item{lab}{(\code{data.frame}). A data frame with Ensembl Gene IDs as row names and Gene Symbols in the only column.}
 
 \item{biomart}{(\code{logical}). Should Biomart be used? Defaults to \code{TRUE}.}
+
+\item{biom.data.set}{\code{character} of length one. Biomart data set to use. Defaults to 'hsapiens_gene_ensembl'}
+
+\item{biom.mart}{\code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".}
+
+\item{host}{\code{character} of length one. Host URL.}
+
+\item{biom.filter}{\code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".}
+
+\item{biom.attributes}{\code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!}
+
+\item{biom.cache}{\code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.}
+
+\item{use.cache}{(\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.}
 
 \item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
 }

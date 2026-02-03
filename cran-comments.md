@@ -3,9 +3,14 @@ title: CRAN package convertid
 ---
 
 ## Resubmission 2026-01-09
+This is a resubmission of a maintenance release of the package to address an error when accessing biomart through the 'todisp2()' function related to cache handling.
+The function was updated to offer the same flexibility as the internally used biomart calling function allowing to avoid the error.
+The version number was increased to 0.2.0.  
+
+## Resubmission 2026-01-09
 This is a resubmission of a maintenance release of the package to address a request by the CRAN team regarding strong dependencies on Bioconductor annotation packages.
 Strong dependencies were removed and those packages are now checked at runtime using requireNamespace(), returning an error message to the user if not installed.
-In addition, the default URL to download HGNC gene definitions was updated.
+In addition, the default URL to download HGNC gene definitions in function 'likely_symbol()' was updated and minor planned improvements to the same function were implemented.
 The version number was increased to 0.1.12.  
 
 ### Test environments (2026-01-09 - )

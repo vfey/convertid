@@ -390,6 +390,13 @@ get.bm <-
 #' @param ensg (\code{character}). Vector of Ensemble Gene IDs. Other ID types are not yet supported.
 #' @param lab (\code{data.frame}). A data frame with Ensembl Gene IDs as row names and Gene Symbols in the only column.
 #' @param biomart (\code{logical}). Should Biomart be used? Defaults to \code{TRUE}.
+#' @param biom.data.set \code{character} of length one. Biomart data set to use. Defaults to 'hsapiens_gene_ensembl'
+#' @param biom.mart \code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".
+#' @param host \code{character} of length one. Host URL.
+#' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
+#' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
+#' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
+#' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
 #' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
 #' @return A character vector of Gene Symbols.
 #' @seealso \command{\link[convertid]{get.bm}}
@@ -401,15 +408,26 @@ get.bm <-
 #' }
 #' @keywords utilities
 #' @export
-todisp2 <- function(ensg, lab=NULL, biomart=TRUE, verbose = FALSE)
+todisp2 <- function(ensg,
+                    lab=NULL,
+                    biomart=TRUE,
+                    biom.data.set = "hsapiens_gene_ensembl",
+                    biom.mart = "ensembl",
+                    host = "https://www.ensembl.org",
+                    biom.filter = "ensembl_gene_id",
+                    biom.attributes = c("ensembl_gene_id", "hgnc_symbol"),
+                    biom.cache = rappdirs::user_cache_dir("biomaRt"),
+                    use.cache = TRUE,
+                    verbose = FALSE)
 {
   if (biomart) {
     if (!length(grep("^ENS[A-Z]{0,}[0-9]{11}", ensg[1]))) {
       if (verbose) message("    Input is not Ensembl Gene IDs. Doing nothing.")
       return(ensg)
     }
-    sym <- get.bm(ensg, biom.data.set="hsapiens_gene_ensembl", biom.mart="ensembl", host="https://www.ensembl.org",
-                  biom.filter="ensembl_gene_id", biom.attributes=c("ensembl_gene_id","hgnc_symbol"),
+    sym <- get.bm(ensg, biom.data.set=biom.data.set, biom.mart=biom.mart, host=host,
+                  biom.filter=biom.filter, biom.attributes=biom.attributes,
+                  biom.cache = biom.cache, use.cache = use.cache,
                   verbose = verbose)
   } else if(!is.null(lab)) {
     if (verbose) message("  Using input data frame for ID conversion...")
