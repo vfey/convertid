@@ -2,7 +2,7 @@
 title: CRAN package convertid
 ---
 
-## Resubmission 2026-01-09
+## Resubmission 2026-02-03
 This is a resubmission of a maintenance release of the package to address an error when accessing biomart through the 'todisp2()' function related to cache handling.
 The function was updated to offer the same flexibility as the internally used biomart calling function allowing to avoid the error.
 The version number was increased to 0.2.0.  
