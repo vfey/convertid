@@ -2,7 +2,7 @@
 title: CRAN package convertid
 ---
 
-## Resubmission 2026-02-04
+## Resubmission 2026-02-05
 This is a resubmission of a maintenance release of the package adding a missing feature needed to address an error in the 'coreheat' package.
 The function was updated to allow the user to choose whether input IDs that are missing after conversion should be retained in the output vector, even if NA.
 The version number was increased to 0.2.1.  
