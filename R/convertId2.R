@@ -252,7 +252,8 @@ convert.alias <-
 #' @param biom.mart \code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".
 #' @param host \code{character} of length one. Host URL.
 #' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
-#' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
+#' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s);
+#'   if \code{biom.filter} is missing from this it will be added internally as it is needed for merging query result and input data.
 #' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
 #' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
 #' @param sym.col \code{character}. Name of the column in the query result with gene symbols.
@@ -283,6 +284,9 @@ convert.bm <-
       values <- rownames(dat)
     } else {
       values <- dat[[id]]
+    }
+    if (!biom.filter %in% biom.attributes) {
+      biom.attributes <- c(biom.filter, biom.attributes)
     }
     biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes, biom.cache, use.cache, verbose = verbose)
     gene.lab <- merge(biom.ids, dat, by.x=biom.filter, by.y=id, all.y=TRUE, all.x=FALSE, sort=TRUE)

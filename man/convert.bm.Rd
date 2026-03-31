@@ -32,7 +32,8 @@ convert.bm(
 
 \item{biom.filter}{\code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".}
 
-\item{biom.attributes}{\code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!}
+\item{biom.attributes}{\code{character} vector. Biomart attributes, i.e., type of desired result(s);
+if \code{biom.filter} is missing from this it will be added internally as it is needed for merging query result and input data.}
 
 \item{biom.cache}{\code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.}
 
