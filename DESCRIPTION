@@ -12,7 +12,7 @@ Description: Gene Symbols or Ensembl Gene IDs are converted using the Bimap inte
     'biomaRt' package. Presets and defaults are provided for convenience but all "marts", "filters" and "attributes"
     can be set by the user. Function convert.alias() converts Gene Symbols to Aliases and vice versa and function likely_symbol()
     attempts to determine the most likely current Gene Symbol.
-Depends: AnnotationDbi
+Depends: AnnotationDbi, R (>= 3.5.0)
 Imports: plyr, stringr, biomaRt, stats, xml2, utils, rappdirs, assertthat, methods, httr, BiocFileCache
 Suggests: BiocManager, org.Hs.eg.db, org.Mm.eg.db,  testthat (>= 3.0.0), mockery
 License: GPL-3

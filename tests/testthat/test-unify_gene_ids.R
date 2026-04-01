@@ -155,10 +155,10 @@ testthat::test_that("dedup_gene_ids works in ENSG-only mode (no gene_name column
 # ---------------------------------------------------------------------------
 # unify_gene_ids(): input validation
 # ---------------------------------------------------------------------------
-testthat::test_that("unify_gene_ids errors on non-data-frame input", {
+testthat::test_that("unify_gene_ids errors on non-data-frame, non-character input", {
   testthat::expect_error(
-    unify_gene_ids(c("ENSG00000075624")),
-    "'genes' must be a data frame"
+    unify_gene_ids(c("ENSG00000075624"=60)),
+    "'genes' must be a data frame or character vector"
   )
 })
 

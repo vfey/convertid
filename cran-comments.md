@@ -2,6 +2,20 @@
 title: CRAN package convertid
 ---
 
+## Resubmission 2026-04-01
+This is a resubmission containing a major upgrade of the package. A new function was added to unify gene IDs and,
+if provided, symbols, using a priority-based logic based on available annotations fetched from biomart or annotation
+.db packages. With the new function, the package now depends on R version >= 3.5.0. Additionally, the likely_symbol()
+function was upgraded to use an index-based search for existing symbol alternatives based on a sensible threshold on
+the number of input symbols. Also, the downloaded hgnc table is cached for the duration of the current R session, both
+new features significantly decreasing search time. Further, test functions were added and a minor change made to doing
+biomart queries in convert.bm().
+
+### Test environments (2026-03-31 - )
+* local OS X install: aarch64-apple-darwin25.4.0, R 4.5.2
+* win-builder (devel, release and oldrelease)
+* Red Hat Enterprise Linux release 9.7 (Plow), R 4.5.2
+
 ## Resubmission 2026-02-05
 This is a resubmission of a maintenance release of the package adding a missing feature needed to address an error in the 'coreheat' package.
 The function was updated to allow the user to choose whether input IDs that are missing after conversion should be retained in the output vector, even if NA.
@@ -18,7 +32,7 @@ Strong dependencies were removed and those packages are now checked at runtime u
 In addition, the default URL to download HGNC gene definitions in function 'likely_symbol()' was updated and minor planned improvements to the same function were implemented.
 The version number was increased to 0.1.12.  
 
-### Test environments (2026-01-09 - )
+### Test environments (2026-01-09 - 2026-02-05)
 * local OS X install: aarch64-apple-darwin25.2.0, R 4.5.2
 * win-builder (devel, release and oldrelease)
 * Red Hat Enterprise Linux release 9.7 (Plow), R 4.5.2
