@@ -33,148 +33,238 @@
 #' @importFrom BiocFileCache BiocFileCache bfcadd bfcquery
 #' @importFrom httr config set_config set_cookies GET timeout
 NULL
-#' Convert Gene Symbols to Ensembl Gene IDs or vice versa
-#' @description \command{convertId2()} uses the Bimap interface in AnnotationDbi to extract information from
-#'     annotation packages. The function is limited to Human and Mouse annotations and is provided only as
-#'     fallback mechanism for the most common use cases in data analysis. Please use the Biomart interface
-#'     function \code{convert.bm()} for more flexibility.
-#' @param id (\code{character}). Vector of gene symbols.
-#' @param species (\code{character}). One of "Human" and "Mouse". Defaults to "Human".
-#' @return A named character vector where the input IDs are the names and the query results the values.
-#' @seealso \code{\link[AnnotationDbi]{Bimap-envirAPI}}
+#' Convert Gene IDs Between Ensembl, Symbol and Entrez
+#' @description \command{convertId2()} is a fast 1-to-1 gene identifier converter
+#'     using AnnotationDbi organism packages. It converts between Ensembl gene IDs,
+#'     gene symbols and Entrez gene IDs. The output vector is always the same
+#'     length and in the same order as the input vector, with unresolved entries
+#'     returned as \code{NA}.
+#' @param id (\code{character}). Vector of gene identifiers to convert. Can be
+#'     Ensembl gene IDs (e.g. \code{"ENSG00000075624"}), gene symbols
+#'     (e.g. \code{"ACTB"}), or Entrez gene IDs (e.g. \code{"60"}).
+#'     Input type is detected automatically from the first non-NA element.
+#' @param species (\code{character}). One of \code{"Human"} or \code{"Mouse"}.
+#'     Defaults to \code{"Human"}.
+#' @param output (\code{character}). One of \code{"auto"}, \code{"symbol"}, or
+#'     \code{"ensembl"}. Controls the return type:
+#'     \describe{
+#'       \item{\code{"auto"}}{Automatic: Ensembl input returns symbols, symbol
+#'         input returns Ensembl IDs, Entrez input returns symbols.}
+#'       \item{\code{"symbol"}}{Always return gene symbols regardless of input type.}
+#'       \item{\code{"ensembl"}}{Always return Ensembl gene IDs regardless of input
+#'         type. Useful when converting Entrez IDs to Ensembl IDs for downstream
+#'         processing.}
+#'     }
+#'     Defaults to \code{"auto"}.
+#' @details
+#' Conversion is performed via Entrez gene IDs as an intermediate step:
+#' \itemize{
+#'   \item Ensembl \eqn{\rightarrow} Entrez \eqn{\rightarrow} symbol
+#'   \item Symbol \eqn{\rightarrow} Entrez \eqn{\rightarrow} Ensembl
+#'   \item Entrez \eqn{\rightarrow} symbol (direct)
+#'   \item Entrez \eqn{\rightarrow} Ensembl (direct)
+#' }
+#' Entries are returned as \code{NA} in two cases:
+#' \itemize{
+#'   \item The input ID is not found in the annotation database.
+#'   \item The input ID maps to more than one Entrez gene ID. Such ambiguous
+#'     mappings are discarded rather than returning multiple values, in order
+#'     to strictly preserve the 1-to-1 correspondence between input and output
+#'     vectors.
+#' }
+#' Input type is detected automatically from the first non-NA element of
+#' \code{id}: IDs matching the species Ensembl prefix (\code{ENSG} for Human,
+#' \code{ENSMU} for Mouse) are treated as Ensembl gene IDs; purely numeric
+#' strings are treated as Entrez gene IDs; all others are treated as gene
+#' symbols. All elements of \code{id} are assumed to be of the same type.
+#' The function is limited to Human and Mouse annotations and is provided mainly
+#' as fast conversion mechanism for the most common use cases in data analysis.
+#' @return A named character vector of the same length and order as \code{id},
+#'     named by the input IDs. Entries that could not be converted are
+#'     \code{NA}.
+#' @seealso \code{\link{convert.bm}} for BioMart-based conversion which
+#'     returns richer annotations but does not guarantee output length or order.
 #' @examples
-#' convertId2("ENSG00000111199")
-#' convertId2("TRPV4")
+#' \dontrun{
+#' # Ensembl -> symbol (auto)
+#' convertId2("ENSG00000075624")
+#' convertId2(c("ENSG00000075624", "ENSG00000111640"))
+#'
+#' # Symbol -> Ensembl (auto)
+#' convertId2("ACTB")
+#' convertId2(c("ACTB", "GAPDH"))
+#'
+#' # Entrez -> symbol (auto)
+#' convertId2("60")
+#' convertId2(c("60", "2597"))
+#'
+#' # Entrez -> Ensembl (explicit output)
+#' convertId2("60", output = "ensembl")
+#' convertId2(c("60", "2597"), output = "ensembl")
+#' }
 #' @export
-convertId2 <-
-  function (id, species = c("Human", "Mouse"))
-  {
-    species <- match.arg(species)
-    if (species == "Human") {
-      if (!requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-        stop(
-          "The Bioconductor package 'org.Hs.eg.db' is required for this function.\n",
-          "Install it via BiocManager::install('org.Hs.eg.db').",
-          call. = FALSE
-        )
-      }
-      # Get the namespace without using ::
-      orgdb <- getNamespace("org.Hs.eg.db")
+convertId2 <- function(id, species = c("Human", "Mouse"),
+                       output = c("auto", "symbol", "ensembl"))
+{
+  species <- match.arg(species)
+  output  <- match.arg(output)
 
-      # Access the objects inside the namespace
-      ensg2eg.env <- orgdb[["org.Hs.egENSEMBL2EG"]]
-      sym.env    <- orgdb[["org.Hs.egSYMBOL"]]
-      sym2eg.env <- orgdb[["org.Hs.egSYMBOL2EG"]]
-      ensg.env   <- orgdb[["org.Hs.egENSEMBL"]]
-      ensg <- "ENSG"
-    }
-    if (species == "Mouse") {
-      if (!requireNamespace("org.Mm.eg.db", quietly = TRUE)) {
-        stop(
-          "The Bioconductor package 'org.Mm.eg.db' is required for this function.\n",
-          "Install it via BiocManager::install('org.Mm.eg.db').",
-          call. = FALSE
-        )
-      }
-      # Get the namespace without using ::
-      orgdb <- getNamespace("org.Mm.eg.db")
+  # ---------------------------------------------------------------------------
+  # Load organism package environments
+  # ---------------------------------------------------------------------------
+  if (species == "Human") {
+    if (!requireNamespace("org.Hs.eg.db", quietly = TRUE))
+      stop(
+        "The Bioconductor package 'org.Hs.eg.db' is required for this function.\n",
+        "Install it via BiocManager::install('org.Hs.eg.db').",
+        call. = FALSE
+      )
+    orgdb    <- getNamespace("org.Hs.eg.db")
+    ensg2eg  <- orgdb[["org.Hs.egENSEMBL2EG"]]
+    sym      <- orgdb[["org.Hs.egSYMBOL"]]
+    sym2eg   <- orgdb[["org.Hs.egSYMBOL2EG"]]
+    ensg     <- orgdb[["org.Hs.egENSEMBL"]]
+    ensg_pfx <- "ENSG"
+  }
+  if (species == "Mouse") {
+    if (!requireNamespace("org.Mm.eg.db", quietly = TRUE))
+      stop(
+        "The Bioconductor package 'org.Mm.eg.db' is required for this function.\n",
+        "Install it via BiocManager::install('org.Mm.eg.db').",
+        call. = FALSE
+      )
+    orgdb    <- getNamespace("org.Mm.eg.db")
+    ensg2eg  <- orgdb[["org.Mm.egENSEMBL2EG"]]
+    sym      <- orgdb[["org.Mm.egSYMBOL"]]
+    sym2eg   <- orgdb[["org.Mm.egSYMBOL2EG"]]
+    ensg     <- orgdb[["org.Mm.egENSEMBL"]]
+    ensg_pfx <- "ENSMU"
+  }
 
-      # Access the objects inside the namespace
-      ensg2eg.env <- orgdb[["org.Mm.egENSEMBL2EG"]]
-      sym.env    <- orgdb[["org.Mm.egSYMBOL"]]
-      sym2eg.env <- orgdb[["org.Mm.egSYMBOL2EG"]]
-      ensg.env   <- orgdb[["org.Mm.egENSEMBL"]]
-      ensg <- "ENSMU"
-    }
-    if (length(id) == 1) {
-      if (length(grep(ensg, id)) > 0) {
-        if (AnnotationDbi::exists(id, envir = ensg2eg.env)) {
-          entrez <- get(id, envir = ensg2eg.env)
-          if (length(entrez) > 1) {
-            sym <- NA_character_
-          }
-          else {
-            if (AnnotationDbi::exists(entrez, envir = sym.env)) {
-              sym <- paste(get(entrez, envir = sym.env),
-                           collapse = " /// ")
-            } else {
-              sym <- NA_character_
-            }
-          }
-        }
-        else {
-          sym <- NA_character_
-        }
-      }
-      else {
-        if (AnnotationDbi::exists(id, envir = sym2eg.env)) {
-          entrez <- get(id, envir = sym2eg.env)
-          if (length(entrez) > 1) {
-            sym <- NA_character_
-          }
-          else {
-            if (AnnotationDbi::exists(entrez, envir = ensg.env)) {
-              sym <- paste(get(entrez, envir = ensg.env),
-                           collapse = " /// ")
-            } else {
-              sym <- NA_character_
-            }
-          }
-        }
-        else {
-          sym <- NA_character_
-        }
-      }
-      names(sym) <- id
-      return(sym)
-    }
-    else {
-      if (length(grep(ensg, id[1])) > 0) {
-        entrez <- mget(id, envir = ensg2eg.env, ifnotfound = NA)
-        entrez <- sapply(entrez, function(x) {
-          if (length(x) > 1 || is.na(x)) {
-            "---"
-          }
-          else {
-            x
-          }
-        })
-        hugo <- mget(entrez, envir = sym.env, ifnotfound = NA)
-        hugo <- sapply(hugo, function(x) {
-          if (length(x) > 1) {
-            paste(x, collapse = " /// ")
-          }
-          else {
-            x
-          }
-        })
-        names(hugo) <- id
-        return(hugo)
-      }
-      else {
-        entrez <- mget(id, envir = sym2eg.env, ifnotfound = NA)
-        entrez <- sapply(entrez, function(x) {
-          if (length(x) > 1 || is.na(x)) {
-            "---"
-          }
-          else {
-            x
-          }
-        })
-        ensg <- mget(entrez, envir = ensg.env, ifnotfound = NA)
-        ensg <- sapply(ensg, function(x) {
-          if (length(x) > 1) {
-            paste(x, collapse = " /// ")
-          }
-          else {
-            x
-          }
-        })
-        names(ensg) <- id
-        return(ensg)
-      }
+  # ---------------------------------------------------------------------------
+  # Detect input type from first non-NA element
+  # ---------------------------------------------------------------------------
+  first_id   <- id[!is.na(id)][1L]
+  is_ensembl <- length(grep(ensg_pfx, first_id)) > 0L
+  is_entrez  <- !is_ensembl && grepl("^[0-9]+$", first_id)
+  # otherwise: symbol
+
+  # Resolve effective output type under "auto"
+  eff_output <- if (output == "auto") {
+    if (is_ensembl || is_entrez) "symbol" else "ensembl"
+  } else {
+    output
+  }
+
+  # ---------------------------------------------------------------------------
+  # Helper: safe single-value lookup; returns NA on miss or if length > 1
+  # (length > 1 = ambiguous multi-Entrez mapping, discarded to preserve 1-to-1)
+  # ---------------------------------------------------------------------------
+  safe_get1 <- function(key, env) {
+    if (AnnotationDbi::exists(key, envir = env)) {
+      val <- get(key, envir = env)
+      if (length(val) > 1L) NA_character_ else val
+    } else {
+      NA_character_
     }
   }
+
+  # Helper: multi-value lookup collapsed to /// string; NA on miss
+  safe_get_multi <- function(key, env) {
+    if (AnnotationDbi::exists(key, envir = env)) {
+      paste(get(key, envir = env), collapse = " /// ")
+    } else {
+      NA_character_
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Single-element fast path
+  # ---------------------------------------------------------------------------
+  if (length(id) == 1L) {
+    result <- if (is_ensembl) {
+      if (eff_output == "symbol") {
+        eg <- safe_get1(id, ensg2eg)
+        if (is.na(eg)) NA_character_ else safe_get1(eg, sym)
+      } else {
+        id   # ensembl -> ensembl: return as-is
+      }
+    } else if (is_entrez) {
+      if (eff_output == "symbol") {
+        safe_get1(id, sym)
+      } else {
+        safe_get_multi(id, ensg)
+      }
+    } else {
+      # symbol input
+      if (eff_output == "ensembl") {
+        eg <- safe_get1(id, sym2eg)
+        if (is.na(eg)) NA_character_ else safe_get_multi(eg, ensg)
+      } else {
+        id   # symbol -> symbol: return as-is
+      }
+    }
+    names(result) <- id
+    return(result)
+  }
+
+  # ---------------------------------------------------------------------------
+  # Batch path
+  # ---------------------------------------------------------------------------
+  result <- if (is_ensembl) {
+    if (eff_output == "symbol") {
+      # ENSG -> Entrez -> symbol (original logic preserved exactly)
+      entrez <- mget(id, envir = ensg2eg, ifnotfound = NA)
+      entrez <- sapply(entrez, function(x) {
+        if (length(x) > 1L || is.na(x)) "---" else x
+      })
+      hugo <- mget(entrez, envir = sym, ifnotfound = NA)
+      sapply(hugo, function(x) {
+        if (length(x) > 1L) paste(x, collapse = " /// ") else x
+      })
+    } else {
+      setNames(id, id)   # ensembl -> ensembl
+    }
+
+  } else if (is_entrez) {
+    if (eff_output == "symbol") {
+      # Entrez -> symbol (direct)
+      result_sym <- mget(id, envir = sym, ifnotfound = NA)
+      sapply(result_sym, function(x) {
+        if (length(x) > 1L)      paste(x, collapse = " /// ")
+        else if (is.na(x[[1L]])) NA_character_
+        else                     x[[1L]]
+      })
+    } else {
+      # Entrez -> ENSG (direct)
+      result_ensg <- mget(id, envir = ensg, ifnotfound = NA)
+      sapply(result_ensg, function(x) {
+        if (length(x) > 1L)      paste(x, collapse = " /// ")
+        else if (is.na(x[[1L]])) NA_character_
+        else                     x[[1L]]
+      })
+    }
+
+  } else {
+    # Symbol input
+    if (eff_output == "ensembl") {
+      # symbol -> Entrez -> ENSG (original logic preserved exactly)
+      entrez <- mget(id, envir = sym2eg, ifnotfound = NA)
+      entrez <- sapply(entrez, function(x) {
+        if (length(x) > 1L || is.na(x)) "---" else x
+      })
+      result_ensg <- mget(entrez, envir = ensg, ifnotfound = NA)
+      sapply(result_ensg, function(x) {
+        if (length(x) > 1L) paste(x, collapse = " /// ") else x
+      })
+    } else {
+      setNames(id, id)   # symbol -> symbol
+    }
+  }
+
+  names(result) <- id
+  result
+}
 
 #' Convert Symbols to Aliases and Vice Versa.
 #' @description \command{convert.alias()} attempts to find all possible symbol-alias combinations for a given gene symbol, i.e.,
@@ -301,90 +391,6 @@ convert.bm <-
     return(gene.lab)
   }
 
-#' Make a Query to Biomart.
-#' @description \command{get.bm()} is a user-friendly wrapper for \command{getBM()} from the \emph{biomaRt} package with default
-#'     settings for Human and Mouse.
-#' It sets all needed variables and performs the query.
-#' @param values \code{character} vector of ids to be converted.
-#' @param biom.data.set \code{character} of length one. Biomart data set to use. Defaults to 'human' (internally translated to "hsapiens_gene_ensembl" if \code{biom.mart="ensembl"}).
-#' @param biom.mart \code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".
-#' @param host \code{character} of length one. Host URL.
-#' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
-#' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
-#' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
-#' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
-#' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
-#' @return  A data frame with the retrieved information.
-#' @author Vidal Fey
-#' @seealso \command{\link[biomaRt]{getBM}}
-#' @examples
-#' \dontrun{
-#' val <- c("ENSG00000111199", "ENSG00000134121", "ENSG00000176102", "ENSG00000171611")
-#' bm <- get.bm(val)
-#' bm
-#' }
-#' @keywords utilities
-#' @export
-get.bm <-
-  function(values,
-           biom.data.set = c("human", "mouse"),
-           biom.mart = c("ensembl", "mouse", "snp", "funcgen", "plants"),
-           host = "https://www.ensembl.org",
-           biom.filter = "ensembl_gene_id",
-           biom.attributes = c("ensembl_gene_id",
-                               "hgnc_symbol", "description"),
-           biom.cache = rappdirs::user_cache_dir("biomaRt"),
-           use.cache = TRUE,
-           verbose = FALSE)
-  {
-    if (use.cache) {
-      cache <- .setCacheLocation(cache.dir = biom.cache)
-      if (verbose) message("  Using biomaRt cache directory ", sQuote(cache))
-    }
-    biom <- match.arg(biom.mart)
-    if (biom=="plants" && host == "https://www.ensembl.org") {
-      if (verbose) message(sQuote("Plants"), "mart requested. Setting host to ", sQuote("https://plants.ensembl.org"), "...")
-      host <- "https://plants.ensembl.org"
-    }
-    if (verbose) message("Getting CURL SSL options for securely contacting host ", sQuote(host), "...")
-    httr_config <- .get.httr_config(host = host, use.cache = use.cache)
-    marts <- biomaRt::listMarts(host=host, http_config=httr_config)[["biomart"]]
-    marts1 <- sub("mart", "", tolower(marts))
-    marts1 <- unlist(lapply(strsplit(tolower(marts1), "_"), function(x) x[length(x)]))
-    biom <- marts[grep(biom, marts1)]
-    if (verbose) message("Using BioMart: ", sQuote(biom))
-    if (any(biom.data.set %in% c("human", "mouse"))) {
-      biom.data.set <- match.arg(biom.data.set)
-    }
-    if (biom.data.set=="human") {
-      if (biom=="ENSEMBL_MART_ENSEMBL") {
-        if (verbose) message("Setting data set to ", sQuote("hsapiens_gene_ensembl"), "...")
-        biom.data.set <- "hsapiens_gene_ensembl"
-      } else {
-        stop("'biom.mart' needs to be 'ensembl' to use data set 'human'!")
-      }
-    }
-    if (biom.data.set=="mouse") {
-      if (biom=="ENSEMBL_MART_ENSEMBL") {
-        if (verbose) message("Setting data set to ", sQuote("mmusculus_gene_ensembl"), "...")
-        biom.data.set <- "mmusculus_gene_ensembl"
-      } else {
-        stop("'biom.mart' needs to be 'ensembl' to use data set 'mouse'!")
-      }
-    }
-
-    if (verbose) message("Input ID type is ", sQuote(biom.filter))
-    mart <- biomaRt::useDataset(dataset=biom.data.set, mart=biomaRt::useMart(biomart=biom, host=host))
-
-    if (!is.list(values)) {
-      values <- as.character(values)
-    }
-
-    if (verbose) message("  Information requested: ", sQuote(setdiff(biom.attributes, biom.filter)), "...")
-    biomaRt::getBM(attributes=biom.attributes, filters=biom.filter, values=values, mart=mart, useCache = use.cache)
-  }
-
-#'
 #' Convenience Function to Convert Ensembl Gene IDs to Gene Symbols
 #' @description \command{todisp2()} uses Biomart by employing \command{get.bm()} to retrieve Gene Symbols for a set of Ensembl
 #'     Gene IDs. It is mainly meant as a fast way to convert IDs in standard gene expression analysis output to Symbols,
