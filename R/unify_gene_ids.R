@@ -406,30 +406,6 @@ unify_gene_ids <- function(genes,
   if (has_symbols) names(genes)[names(genes) == symbol_col] <- "gene_name"
 
   # ---------------------------------------------------------------------------
-  # Helper: try BioMart query with fallback hosts
-  # ---------------------------------------------------------------------------
-  try_biomart <- function(genes, host, fallback_hosts, verbose) {
-    all_hosts <- c(host, fallback_hosts)
-    for (h in all_hosts) {
-      if (verbose) message(sprintf("  Trying BioMart host: %s", h))
-      result <- tryCatch(
-        convert.bm(genes, id = "ensembl_gene_id", host = h),
-        error = function(e) {
-          if (verbose) message(sprintf("  Failed: %s", conditionMessage(e)))
-          NULL
-        }
-      )
-      if (!is.null(result) && !all(is.na(result$hgnc_symbol))) {
-        if (verbose) message(sprintf("  Success with host: %s", h))
-        return(result)
-      }
-    }
-    warning("All BioMart hosts failed. Proceeding without BioMart results.")
-    genes$hgnc_symbol <- NA_character_
-    genes
-  }
-
-  # ---------------------------------------------------------------------------
   # Lookups
   # ---------------------------------------------------------------------------
   if (verbose) message("Querying BioMart...")
