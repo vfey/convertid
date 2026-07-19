@@ -27,7 +27,7 @@
 #' @import xml2
 #' @importFrom methods is
 #' @importFrom assertthat assert_that
-#' @importFrom stats na.omit
+#' @importFrom stats na.omit setNames
 #' @importFrom utils read.delim
 #' @importFrom rappdirs user_cache_dir
 #' @importFrom BiocFileCache BiocFileCache bfcadd bfcquery
@@ -346,6 +346,11 @@ convert.alias <-
 #'   if \code{biom.filter} is missing from this it will be added internally as it is needed for merging query result and input data.
 #' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
 #' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
+#' @param biomart.fallback \code{character} vector. Fallback host URLs to try if the primary
+#'   \code{host} fails. Set to \code{NULL} to disable fallback. Defaults to Ensembl mirror sites.
+#' @param chunk.size \code{integer} of length one. Maximum number of IDs per BioMart query.
+#'   Large ID lists are split into chunks of this size to avoid server timeouts.
+#'   Set to \code{Inf} to disable chunking. Defaults to \code{500}.
 #' @param sym.col \code{character}. Name of the column in the query result with gene symbols.
 #' @param rm.dups \code{logical}. Should duplicated input IDs (\option{biom.filter}) be removed from the result?
 #' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
@@ -362,12 +367,20 @@ convert.alias <-
 #' }
 #' @export
 convert.bm <-
-  function(dat, id="ID", biom.data.set = c("human", "mouse"),
+  function(dat, id="ID",
+           biom.data.set = c("human", "mouse"),
            biom.mart=c("ensembl", "mouse", "snp", "funcgen", "plants"),
-           host="https://www.ensembl.org", biom.filter="ensembl_gene_id",
+           host="https://www.ensembl.org",
+           biom.filter="ensembl_gene_id",
            biom.attributes=c("ensembl_gene_id","hgnc_symbol","description"),
            biom.cache = rappdirs::user_cache_dir("biomaRt"),
-           use.cache = TRUE, sym.col="hgnc_symbol", rm.dups=FALSE,
+           use.cache = TRUE,
+           biomart.fallback = c("https://useast.ensembl.org",
+                                "https://uswest.ensembl.org",
+                                "https://asia.ensembl.org"),
+           chunk.size = 500L,
+           sym.col="hgnc_symbol",
+           rm.dups=FALSE,
            verbose = FALSE)
   {
     if (id=="row.names") {
@@ -378,7 +391,7 @@ convert.bm <-
     if (!biom.filter %in% biom.attributes) {
       biom.attributes <- c(biom.filter, biom.attributes)
     }
-    biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes, biom.cache, use.cache, verbose = verbose)
+    biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes, biom.cache, use.cache, biomart.fallback, chunk.size, verbose = verbose)
     gene.lab <- merge(biom.ids, dat, by.x=biom.filter, by.y=id, all.y=TRUE, all.x=FALSE, sort=TRUE)
     if (rm.dups) {
       if (verbose) message("  Removing ", length(which(duplicated(gene.lab[[biom.filter]]))), " duplicated row(s)...")
