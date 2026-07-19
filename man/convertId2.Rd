@@ -2,28 +2,91 @@
 % Please edit documentation in R/convertId2.R
 \name{convertId2}
 \alias{convertId2}
-\title{Convert Gene Symbols to Ensembl Gene IDs or vice versa}
+\title{Convert Gene IDs Between Ensembl, Symbol and Entrez}
 \usage{
-convertId2(id, species = c("Human", "Mouse"))
+convertId2(
+  id,
+  species = c("Human", "Mouse"),
+  output = c("auto", "symbol", "ensembl")
+)
 }
 \arguments{
-\item{id}{(\code{character}). Vector of gene symbols.}
+\item{id}{(\code{character}). Vector of gene identifiers to convert. Can be
+Ensembl gene IDs (e.g. \code{"ENSG00000075624"}), gene symbols
+(e.g. \code{"ACTB"}), or Entrez gene IDs (e.g. \code{"60"}).
+Input type is detected automatically from the first non-NA element.}
 
-\item{species}{(\code{character}). One of "Human" and "Mouse". Defaults to "Human".}
+\item{species}{(\code{character}). One of \code{"Human"} or \code{"Mouse"}.
+Defaults to \code{"Human"}.}
+
+\item{output}{(\code{character}). One of \code{"auto"}, \code{"symbol"}, or
+\code{"ensembl"}. Controls the return type:
+\describe{
+  \item{\code{"auto"}}{Automatic: Ensembl input returns symbols, symbol
+    input returns Ensembl IDs, Entrez input returns symbols.}
+  \item{\code{"symbol"}}{Always return gene symbols regardless of input type.}
+  \item{\code{"ensembl"}}{Always return Ensembl gene IDs regardless of input
+    type. Useful when converting Entrez IDs to Ensembl IDs for downstream
+    processing.}
+}
+Defaults to \code{"auto"}.}
 }
 \value{
-A named character vector where the input IDs are the names and the query results the values.
+A named character vector of the same length and order as \code{id},
+    named by the input IDs. Entries that could not be converted are
+    \code{NA}.
 }
 \description{
-\command{convertId2()} uses the Bimap interface in AnnotationDbi to extract information from
-    annotation packages. The function is limited to Human and Mouse annotations and is provided only as
-    fallback mechanism for the most common use cases in data analysis. Please use the Biomart interface
-    function \code{convert.bm()} for more flexibility.
+\command{convertId2()} is a fast 1-to-1 gene identifier converter
+    using AnnotationDbi organism packages. It converts between Ensembl gene IDs,
+    gene symbols and Entrez gene IDs. The output vector is always the same
+    length and in the same order as the input vector, with unresolved entries
+    returned as \code{NA}.
+}
+\details{
+Conversion is performed via Entrez gene IDs as an intermediate step:
+\itemize{
+  \item Ensembl \eqn{\rightarrow} Entrez \eqn{\rightarrow} symbol
+  \item Symbol \eqn{\rightarrow} Entrez \eqn{\rightarrow} Ensembl
+  \item Entrez \eqn{\rightarrow} symbol (direct)
+  \item Entrez \eqn{\rightarrow} Ensembl (direct)
+}
+Entries are returned as \code{NA} in two cases:
+\itemize{
+  \item The input ID is not found in the annotation database.
+  \item The input ID maps to more than one Entrez gene ID. Such ambiguous
+    mappings are discarded rather than returning multiple values, in order
+    to strictly preserve the 1-to-1 correspondence between input and output
+    vectors.
+}
+Input type is detected automatically from the first non-NA element of
+\code{id}: IDs matching the species Ensembl prefix (\code{ENSG} for Human,
+\code{ENSMU} for Mouse) are treated as Ensembl gene IDs; purely numeric
+strings are treated as Entrez gene IDs; all others are treated as gene
+symbols. All elements of \code{id} are assumed to be of the same type.
+The function is limited to Human and Mouse annotations and is provided mainly
+as fast conversion mechanism for the most common use cases in data analysis.
 }
 \examples{
-convertId2("ENSG00000111199")
-convertId2("TRPV4")
+\dontrun{
+# Ensembl -> symbol (auto)
+convertId2("ENSG00000075624")
+convertId2(c("ENSG00000075624", "ENSG00000111640"))
+
+# Symbol -> Ensembl (auto)
+convertId2("ACTB")
+convertId2(c("ACTB", "GAPDH"))
+
+# Entrez -> symbol (auto)
+convertId2("60")
+convertId2(c("60", "2597"))
+
+# Entrez -> Ensembl (explicit output)
+convertId2("60", output = "ensembl")
+convertId2(c("60", "2597"), output = "ensembl")
+}
 }
 \seealso{
-\code{\link[AnnotationDbi]{Bimap-envirAPI}}
+\code{\link{convert.bm}} for BioMart-based conversion which
+    returns richer annotations but does not guarantee output length or order.
 }

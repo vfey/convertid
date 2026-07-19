@@ -14,6 +14,9 @@ convert.bm(
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol", "description"),
   biom.cache = rappdirs::user_cache_dir("biomaRt"),
   use.cache = TRUE,
+  biomart.fallback = c("https://useast.ensembl.org", "https://uswest.ensembl.org",
+    "https://asia.ensembl.org"),
+  chunk.size = 500L,
   sym.col = "hgnc_symbol",
   rm.dups = FALSE,
   verbose = FALSE
@@ -38,6 +41,13 @@ if \code{biom.filter} is missing from this it will be added internally as it is 
 \item{biom.cache}{\code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.}
 
 \item{use.cache}{(\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.}
+
+\item{biomart.fallback}{\code{character} vector. Fallback host URLs to try if the primary
+\code{host} fails. Set to \code{NULL} to disable fallback. Defaults to Ensembl mirror sites.}
+
+\item{chunk.size}{\code{integer} of length one. Maximum number of IDs per BioMart query.
+Large ID lists are split into chunks of this size to avoid server timeouts.
+Set to \code{Inf} to disable chunking. Defaults to \code{500}.}
 
 \item{sym.col}{\code{character}. Name of the column in the query result with gene symbols.}
 
