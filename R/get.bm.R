@@ -6,12 +6,12 @@
 #' @param biom.data.set \code{character} of length one. Biomart data set to use. Defaults to 'human' (internally translated to "hsapiens_gene_ensembl" if \code{biom.mart="ensembl"}).
 #' @param biom.mart \code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".
 #' @param host \code{character} of length one. Host URL.
-#' @param biomart.fallback \code{character} vector. Fallback host URLs to try if the primary
-#'   \code{host} fails. Set to \code{NULL} to disable fallback. Defaults to Ensembl mirror sites.
 #' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
 #' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
 #' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
 #' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
+#' @param biomart.fallback \code{character} vector. Fallback host URLs to try if the primary
+#'   \code{host} fails. Set to \code{NULL} to disable fallback. Defaults to Ensembl mirror sites.
 #' @param chunk.size \code{integer} of length one. Maximum number of IDs per BioMart query.
 #'   Large ID lists are split into chunks of this size to avoid server timeouts.
 #'   Set to \code{Inf} to disable chunking. Defaults to \code{500}.
@@ -32,14 +32,14 @@ get.bm <-
            biom.data.set = c("human", "mouse"),
            biom.mart = c("ensembl", "mouse", "snp", "funcgen", "plants"),
            host = "https://www.ensembl.org",
-           biomart.fallback = c("https://useast.ensembl.org",
-                                "https://uswest.ensembl.org",
-                                "https://asia.ensembl.org"),
            biom.filter = "ensembl_gene_id",
            biom.attributes = c("ensembl_gene_id",
                                "hgnc_symbol", "description"),
            biom.cache = rappdirs::user_cache_dir("biomaRt"),
            use.cache = TRUE,
+           biomart.fallback = c("https://useast.ensembl.org",
+                                "https://uswest.ensembl.org",
+                                "https://asia.ensembl.org"),
            chunk.size = 500L,
            verbose = FALSE)
   {
@@ -50,7 +50,7 @@ get.bm <-
       values <- as.character(values)
     }
 
-    if (biom.filter == "ensembl_gene_id") {
+    if (identical(biom.filter, "ensembl_gene_id")) {
       vals_check <- if (is.list(values)) unlist(values) else values
       versioned <- grep("\\.[0-9]+$", vals_check, value = TRUE)
       if (length(versioned) > 0L) {
