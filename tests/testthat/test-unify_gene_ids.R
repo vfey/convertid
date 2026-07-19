@@ -243,11 +243,58 @@ testthat::test_that("ENSG gene_name falls back to ensembl_gene_id when all looku
 })
 
 # ---------------------------------------------------------------------------
-# Integration test: full live pipeline (skipped on CRAN)
+# Mocked integration test: full pipeline, no network
+# ---------------------------------------------------------------------------
+testthat::test_that("unify_gene_ids produces correct output with mocked BioMart", {
+  testthat::skip_if_not_installed("org.Hs.eg.db")
+
+  # Stub try_biomart to return the fixture directly (simulates successful BioMart)
+  mockery::stub(unify_gene_ids, "try_biomart", function(genes, ...) {
+    # Return fixture data merged onto the input genes
+    merge(genes, fixture_genes_bm[, c("ensembl_gene_id", "hgnc_symbol")],
+          by = "ensembl_gene_id", all.x = TRUE)
+  })
+  # Stub convertId2 to return known values
+  mockery::stub(unify_gene_ids, "convertid::convertId2", function(x) {
+    lookup <- c(
+      "ENSG00000075624" = "ACTB",
+      "ENSG00000111640" = "GAPDH",
+      "ENSG00000197976" = "AKAP17A",
+      "ENSG00000292343" = "AKAP17A"
+    )
+    unname(lookup[x])
+  })
+
+  input <- data.frame(
+    gene_id   = c("ENSG00000075624", "ENSG00000111640",
+                  "ENSG00000197976", "ENSG00000292343"),
+    gene_name = c("ACTB", "GAPDH", "AKAP17A", "AKAP17A"),
+    stringsAsFactors = FALSE
+  )
+
+  result <- unify_gene_ids(input,
+                           ensg_col   = "gene_id",
+                           symbol_col = "gene_name")
+
+  testthat::expect_s3_class(result, "data.frame")
+  testthat::expect_false(any(duplicated(result$hgnc_symbol)))
+  testthat::expect_false(any(duplicated(result$gene_id)))
+  testthat::expect_false(any(is.na(result$hgnc_symbol)))
+  testthat::expect_equal(
+    result$hgnc_symbol[result$gene_id == "ENSG00000075624"], "ACTB")
+  testthat::expect_equal(
+    result$hgnc_symbol[result$gene_id == "ENSG00000111640"], "GAPDH")
+  testthat::expect_equal(nrow(result[result$hgnc_symbol == "AKAP17A", ]), 1L)
+  testthat::expect_equal(
+    result$gene_id[result$hgnc_symbol == "AKAP17A"], "ENSG00000197976")
+})
+
+# ---------------------------------------------------------------------------
+# Integration test: full live pipeline (skipped on CRAN and offline)
 # ---------------------------------------------------------------------------
 testthat::test_that("unify_gene_ids produces correct output with live lookups", {
   testthat::skip_on_cran()
-  testthat::skip_if_offline()
+  skip_if_biomart_unavailable()
   testthat::skip_if_not_installed("org.Hs.eg.db")
 
   input <- data.frame(
@@ -269,7 +316,6 @@ testthat::test_that("unify_gene_ids produces correct output with live lookups", 
     result$hgnc_symbol[result$gene_id == "ENSG00000075624"], "ACTB")
   testthat::expect_equal(
     result$hgnc_symbol[result$gene_id == "ENSG00000111640"], "GAPDH")
-  # AKAP17A: older AnnotationDbi-confirmed ID retained
   testthat::expect_equal(nrow(result[result$hgnc_symbol == "AKAP17A", ]), 1L)
   testthat::expect_equal(
     result$gene_id[result$hgnc_symbol == "AKAP17A"], "ENSG00000197976")
