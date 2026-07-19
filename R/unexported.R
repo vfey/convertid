@@ -131,3 +131,55 @@
     }
     return(ensembl_config)
   }
+
+#' Try BioMart query with fallback hosts
+#'
+#' Iterates through \code{host} and \code{fallback_hosts}, returning the first
+#' successful result from \code{\link{convert.bm}}. If all hosts fail, emits a
+#' warning and returns \code{genes} with \code{hgnc_symbol} set to
+#' \code{NA_character_}.
+#'
+#' @param genes Data frame with an \code{ensembl_gene_id} column.
+#' @param host Primary BioMart host URL.
+#' @param fallback_hosts Character vector of fallback host URLs.
+#' @param verbose Logical; emit progress messages.
+#' @return Data frame with BioMart annotations, or input with NA symbols on failure.
+#' @keywords internal
+try_biomart <- function(genes, host, fallback_hosts, verbose) {
+  all_hosts <- c(host, fallback_hosts)
+  for (h in all_hosts) {
+    if (verbose) message(sprintf("  Trying BioMart host: %s", h))
+    result <- tryCatch(
+      convert.bm(genes, id = "ensembl_gene_id", host = h),
+      error = function(e) {
+        if (verbose) message(sprintf("  Failed: %s", conditionMessage(e)))
+        NULL
+      }
+    )
+    if (!is.null(result) && !all(is.na(result$hgnc_symbol))) {
+      if (verbose) message(sprintf("  Success with host: %s", h))
+      return(result)
+    }
+  }
+  warning("All BioMart hosts failed. Proceeding without BioMart results.")
+  genes$hgnc_symbol <- NA_character_
+  genes
+}
+
+#' Test if a Biomart connection exists
+#'
+#' The function tries to establish an actual BioMart session and catches the error
+#' if that fails.
+#' @return TRUE or FALSE depending on the test outcome.
+#' @keywords internal
+#' @noRd
+skip_if_biomart_unavailable <- function() {
+  available <- tryCatch(
+    {
+      mart <- biomaRt::useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl")
+      TRUE
+    },
+    error = function(e) FALSE
+  )
+  testthat::skip_if_not(available, "BioMart is not available")
+}
