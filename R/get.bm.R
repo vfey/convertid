@@ -90,23 +90,6 @@ get.bm <-
     }
 
     # -------------------------------------------------------------------------
-    # Helper: connect to a mart on a given host
-    # -------------------------------------------------------------------------
-    .connect_mart <- function(h, biom, biom.data.set, use.cache, verbose) {
-      if (verbose) message("Getting CURL SSL options for securely contacting host ", sQuote(h), "...")
-      httr_config <- .get.httr_config(host = h, use.cache = use.cache)
-      marts <- biomaRt::listMarts(host = h, http_config = httr_config)[["biomart"]]
-      marts1 <- sub("mart", "", tolower(marts))
-      marts1 <- unlist(lapply(strsplit(tolower(marts1), "_"), function(x) x[length(x)]))
-      biom_name <- marts[grep(biom, marts1)]
-      if (verbose) message("Using BioMart: ", sQuote(biom_name))
-      biomaRt::useDataset(
-        dataset = biom.data.set,
-        mart = biomaRt::useMart(biomart = biom_name, host = h)
-      )
-    }
-
-    # -------------------------------------------------------------------------
     # Resolve dataset name
     # -------------------------------------------------------------------------
     if (any(biom.data.set %in% c("human", "mouse"))) {
@@ -123,78 +106,18 @@ get.bm <-
     if (verbose) message("Input ID type is ", sQuote(biom.filter))
 
     # -------------------------------------------------------------------------
-    # Helper: chunked getBM query
+    # Query with host fall-back and return results if any
     # -------------------------------------------------------------------------
-    .chunked_getBM <- function(mart, values, biom.attributes, biom.filter,
-                               use.cache, chunk.size, verbose) {
-      vals <- if (is.list(values)) values else as.character(values)
-      # Lists (e.g. for multi-value filters) are not chunked
-      if (is.list(vals) || length(vals) <= chunk.size) {
-        if (verbose) message("  Querying ", length(vals), " IDs in a single batch...")
-        return(
-          biomaRt::getBM(
-            attributes = biom.attributes,
-            filters    = biom.filter,
-            values     = vals,
-            mart       = mart,
-            useCache   = use.cache
-          )
-        )
-      }
-      chunks <- split(vals, ceiling(seq_along(vals) / chunk.size))
-      if (verbose) message(
-        "  Splitting ", length(vals), " IDs into ", length(chunks),
-        " chunks of up to ", chunk.size, " IDs..."
-      )
-      results <- vector("list", length(chunks))
-      for (i in seq_along(chunks)) {
-        if (verbose) message(
-          "  Chunk ", i, "/", length(chunks),
-          " (", length(chunks[[i]]), " IDs)..."
-        )
-        results[[i]] <- biomaRt::getBM(
-          attributes = biom.attributes,
-          filters    = biom.filter,
-          values     = chunks[[i]],
-          mart       = mart,
-          useCache   = use.cache
-        )
-      }
-      do.call(rbind, results)
-    }
-
-    # -------------------------------------------------------------------------
-    # Query with host fallback
-    # -------------------------------------------------------------------------
-    all_hosts <- c(host, biomart.fallback)
-    result <- NULL
-
-    for (h in all_hosts) {
-      if (verbose) message("Trying host: ", sQuote(h), "...")
-      result <- tryCatch(
-        {
-          mart <- .connect_mart(h, biom, biom.data.set, use.cache, verbose)
-          if (verbose) message("  Information requested: ", sQuote(setdiff(biom.attributes, biom.filter)), "...")
-          .chunked_getBM(mart, values, biom.attributes, biom.filter,
-                         use.cache, chunk.size, verbose)
-        },
-        error = function(e) {
-          if (verbose) message("  Host ", sQuote(h), " failed: ", conditionMessage(e))
-          NULL
-        }
-      )
-      if (!is.null(result)) {
-        if (verbose && h != host)
-          message("Succeeded with fallback host ", sQuote(h), ".")
-        return(result)
-      }
-    }
-
-    # All hosts failed
-    hosts_tried <- paste(sQuote(all_hosts), collapse = ", ")
-    stop(
-      "All BioMart hosts failed (tried: ", hosts_tried, ").\n",
-      "Check your internet connection or try again later.",
-      call. = FALSE
+    .with_biomart_fallback(
+      fn = function(h) {
+        mart <- .connect_mart(h, biom, biom.data.set, use.cache, verbose)
+        if (verbose) message("  Information requested: ",
+                             paste(sQuote(setdiff(biom.attributes, biom.filter)), collapse = ", "), "...")
+        .chunked_getBM(mart, values, biom.attributes, biom.filter,
+                       use.cache, chunk.size, verbose)
+      },
+      host = host,
+      fallback_hosts = biomart.fallback,
+      verbose = verbose
     )
   }
