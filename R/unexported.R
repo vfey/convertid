@@ -146,24 +146,15 @@
 #' @return Data frame with BioMart annotations, or input with NA symbols on failure.
 #' @keywords internal
 try_biomart <- function(genes, host, fallback_hosts, verbose) {
-  all_hosts <- c(host, fallback_hosts)
-  for (h in all_hosts) {
-    if (verbose) message(sprintf("  Trying BioMart host: %s", h))
-    result <- tryCatch(
-      convert.bm(genes, id = "ensembl_gene_id", host = h),
-      error = function(e) {
-        if (verbose) message(sprintf("  Failed: %s", conditionMessage(e)))
-        NULL
-      }
-    )
-    if (!is.null(result) && !all(is.na(result$hgnc_symbol))) {
-      if (verbose) message(sprintf("  Success with host: %s", h))
-      return(result)
+  tryCatch(
+    convert.bm(genes, id = "ensembl_gene_id", host = host,
+               biomart.fallback = fallback_hosts, verbose = verbose),
+    error = function(e) {
+      warning("All BioMart hosts failed. Proceeding without BioMart results.")
+      genes$hgnc_symbol <- NA_character_
+      genes
     }
-  }
-  warning("All BioMart hosts failed. Proceeding without BioMart results.")
-  genes$hgnc_symbol <- NA_character_
-  genes
+  )
 }
 
 #' Test if a Biomart connection exists
@@ -183,3 +174,113 @@ skip_if_biomart_unavailable <- function() {
   )
   testthat::skip_if_not(available, "BioMart is not available")
 }
+
+#' Try a function across BioMart hosts with fallback
+#'
+#' @param fn Function that takes a host URL and returns a result.
+#' @param host Primary host URL.
+#' @param fallback_hosts Character vector of fallback URLs, or NULL.
+#' @param verbose Logical.
+#' @return The first successful result from \code{fn}.
+#' @keywords internal
+.with_biomart_fallback <- function(fn, host, fallback_hosts, verbose) {
+  all_hosts <- c(host, fallback_hosts)
+  last_error <- NULL
+  for (h in all_hosts) {
+    if (verbose) message("Trying host: ", sQuote(h), "...")
+    result <- tryCatch(
+      fn(h),
+      error = function(e) {
+        if (verbose) message("  Host ", sQuote(h), " failed: ", conditionMessage(e))
+        last_error <<- e
+        NULL
+      }
+    )
+    if (!is.null(result)) {
+      if (verbose && h != host)
+        message("Succeeded with fallback host ", sQuote(h), ".")
+      return(result)
+    }
+  }
+  hosts_tried <- paste(sQuote(all_hosts), collapse = ", ")
+  stop(
+    "All BioMart hosts failed (tried: ", hosts_tried, ").\n",
+    "Last error: ", conditionMessage(last_error),
+    call. = FALSE
+  )
+}
+
+#' Connect to a mart on a given host
+#'
+#' @param h (\code{character}) Host URL.
+#' @param biom \code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".
+#' @param biom.data.set \code{character} of length one. Biomart data set to use. Defaults to 'human' (internally translated to "hsapiens_gene_ensembl" if \code{biom.mart="ensembl"}).
+#' @param use.cache (\code{logical}) Should \emph{\code{biomaRt}} functions use the cache? Defaults to \code{TRUE}.
+#' @param verbose Logical.
+#' @return A \code{mart} object for use in biomart queries.
+#' @keywords internal
+.connect_mart <- function(h, biom, biom.data.set, use.cache, verbose) {
+  if (verbose) message("Getting CURL SSL options for securely contacting host ", sQuote(h), "...")
+  httr_config <- .get.httr_config(host = h, use.cache = use.cache)
+  marts <- biomaRt::listMarts(host = h, http_config = httr_config)[["biomart"]]
+  marts1 <- sub("mart", "", tolower(marts))
+  marts1 <- unlist(lapply(strsplit(tolower(marts1), "_"), function(x) x[length(x)]))
+  biom_name <- marts[grep(biom, marts1)]
+  if (verbose) message("Using BioMart: ", sQuote(biom_name))
+  biomaRt::useDataset(
+    dataset = biom.data.set,
+    mart = biomaRt::useMart(biomart = biom_name, host = h)
+  )
+}
+
+#' Make chunked getBM query
+#'
+#' @param mart Biomart \code{mart} object.
+#' @param values \code{character} vector of ids to be converted.
+#' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
+#' @param biom.filter \code{character} of length one. Name of biomart filter, i.e., type of query ids, defaults to "ensembl_gene_id".
+#' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
+#' @param chunk.size \code{integer} of length one. Maximum number of IDs per BioMart query.
+#'   Large ID lists are split into chunks of this size to avoid server timeouts.
+#'   Set to \code{Inf} to disable chunking. Defaults to \code{500}.
+#' @param verbose (\code{logical}). Should verbose output be written to the console?
+#' @return A data frame with the retrieved information.
+#' @keywords internal
+.chunked_getBM <- function(mart, values, biom.attributes, biom.filter,
+                           use.cache, chunk.size, verbose) {
+  vals <- if (is.list(values)) values else as.character(values)
+  # Lists (e.g. for multi-value filters) are not chunked
+  if (is.list(vals) || length(vals) <= chunk.size) {
+    if (verbose) message("  Querying ", length(vals), " IDs in a single batch...")
+    return(
+      biomaRt::getBM(
+        attributes = biom.attributes,
+        filters    = biom.filter,
+        values     = vals,
+        mart       = mart,
+        useCache   = use.cache
+      )
+    )
+  }
+  chunks <- split(vals, ceiling(seq_along(vals) / chunk.size))
+  if (verbose) message(
+    "  Splitting ", length(vals), " IDs into ", length(chunks),
+    " chunks of up to ", chunk.size, " IDs..."
+  )
+  results <- vector("list", length(chunks))
+  for (i in seq_along(chunks)) {
+    if (verbose) message(
+      "  Chunk ", i, "/", length(chunks),
+      " (", length(chunks[[i]]), " IDs)..."
+    )
+    results[[i]] <- biomaRt::getBM(
+      attributes = biom.attributes,
+      filters    = biom.filter,
+      values     = chunks[[i]],
+      mart       = mart,
+      useCache   = use.cache
+    )
+  }
+  do.call(rbind, results)
+}
+
