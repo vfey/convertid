@@ -2,6 +2,20 @@
 title: CRAN package convertid
 ---
 
+## Resubmission 2026-07-20
+This resubmission contains minor upgrades and improvements and marks the beginning
+of a larger restructuring of the package. The fast ID converter 'convertId2()' now
+also includes the option to convert to/from Entrez Gene IDs and as such gains a more
+prominent role in the package. The biomart query function 'get.bm()' now iterates
+through fall-back hosts and optionally splits queries into chunks to avoid time-outs.
+Initial steps to facilitate future upgrades are taken by modularizing biomart response
+validation and iteration functionality into helper functions.
+
+### Test environments (2026-07-19 - )
+* local OS X install: aarch64-apple-darwin25.5.0, R 4.6.0
+* win-builder (devel, release and oldrelease)
+* Red Hat Enterprise Linux release 9.8 (Plow), R 4.6.0
+
 ## Resubmission 2026-04-01
 This is a resubmission containing a major upgrade of the package. A new function was added to unify gene IDs and,
 if provided, symbols, using a priority-based logic based on available annotations fetched from biomart or annotation
