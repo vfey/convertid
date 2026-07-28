@@ -48,8 +48,8 @@ NULL
 #'     Input type is detected automatically from the first non-NA element.
 #' @param species (\code{character}). One of \code{"Human"} or \code{"Mouse"}.
 #'     Defaults to \code{"Human"}.
-#' @param output (\code{character}). One of \code{"auto"}, \code{"symbol"}, or
-#'     \code{"ensembl"}. Controls the return type:
+#' @param output (\code{character}). One of \code{"auto"}, \code{"symbol"},
+#'     \code{"ensembl"}, or \code{"entrez"}. Controls the return type:
 #'     \describe{
 #'       \item{\code{"auto"}}{Automatic: Ensembl input returns symbols, symbol
 #'         input returns Ensembl IDs, Entrez input returns symbols.}
@@ -57,24 +57,46 @@ NULL
 #'       \item{\code{"ensembl"}}{Always return Ensembl gene IDs regardless of input
 #'         type. Useful when converting Entrez IDs to Ensembl IDs for downstream
 #'         processing.}
+#'       \item{\code{"entrez"}}{Always return Entrez gene IDs regardless of input
+#'         type. Useful for offline, network-independent retrieval of Entrez IDs
+#'         (e.g. for KEGG pathway enrichment) as a fast alternative to a BioMart
+#'         query.}
 #'     }
-#'     Defaults to \code{"auto"}.
+#'     Defaults to \code{"auto"}. Note that \code{"auto"} never yields Entrez IDs;
+#'     request them explicitly with \code{output = "entrez"}.
+#' @param multi2NA (\code{logical}). Controls how one-to-many mappings are
+#'     resolved in the returned vector. When a query ID maps to more than one
+#'     target ID (e.g. one gene symbol resolving to several Ensembl or Entrez
+#'     IDs), \code{multi2NA = FALSE} (the default) collapses all hits into a
+#'     single string separated by \code{" /// "}, whereas \code{multi2NA = TRUE}
+#'     returns \code{NA} for that entry. Set \code{multi2NA = TRUE} when the
+#'     result must contain at most one ID per input for downstream use (at the
+#'     cost of possible \code{NA}s). This setting applies to all output types.
+#'     Note that the \emph{intermediate} Entrez step used for
+#'     Ensembl-to-symbol and symbol-to-Ensembl conversion is always resolved
+#'     strictly (an ambiguous intermediate is dropped to \code{NA}) regardless
+#'     of \code{multi2NA}. Defaults to \code{FALSE}.
 #' @details
-#' Conversion is performed via Entrez gene IDs as an intermediate step:
+#' Conversion routes, depending on input type and \code{output}:
 #' \itemize{
 #'   \item Ensembl \eqn{\rightarrow} Entrez \eqn{\rightarrow} symbol
+#'   \item Ensembl \eqn{\rightarrow} Entrez (direct)
 #'   \item Symbol \eqn{\rightarrow} Entrez \eqn{\rightarrow} Ensembl
+#'   \item Symbol \eqn{\rightarrow} Entrez (direct)
 #'   \item Entrez \eqn{\rightarrow} symbol (direct)
 #'   \item Entrez \eqn{\rightarrow} Ensembl (direct)
 #' }
-#' Entries are returned as \code{NA} in two cases:
-#' \itemize{
-#'   \item The input ID is not found in the annotation database.
-#'   \item The input ID maps to more than one Entrez gene ID. Such ambiguous
-#'     mappings are discarded rather than returning multiple values, in order
-#'     to strictly preserve the 1-to-1 correspondence between input and output
-#'     vectors.
-#' }
+#' When input and output type coincide (e.g. Ensembl input with
+#' \code{output = "ensembl"}) the input is returned unchanged.
+#'
+#' Entries are returned as \code{NA} when the input ID is not found in the
+#' annotation database. One-to-many mappings in the final lookup are governed
+#' by \code{multi2NA}: collapsed into a \code{" /// "}-separated string by
+#' default, or returned as \code{NA} when \code{multi2NA = TRUE}. The
+#' intermediate Entrez step used for Ensembl-to-symbol and symbol-to-Ensembl
+#' conversion is always resolved strictly: an input mapping to more than one
+#' Entrez gene ID at that step is dropped to \code{NA} to preserve the 1-to-1
+#' correspondence between input and output vectors.
 #' Input type is detected automatically from the first non-NA element of
 #' \code{id}: IDs matching the species Ensembl prefix (\code{ENSG} for Human,
 #' \code{ENSMU} for Mouse) are treated as Ensembl gene IDs; purely numeric
@@ -104,10 +126,21 @@ NULL
 #' # Entrez -> Ensembl (explicit output)
 #' convertId2("60", output = "ensembl")
 #' convertId2(c("60", "2597"), output = "ensembl")
+#'
+#' # Ensembl -> Entrez (explicit output)
+#' convertId2("ENSG00000075624", output = "entrez")
+#' convertId2(c("ENSG00000075624", "ENSG00000111640"), output = "entrez")
+#'
+#' # Symbol -> Entrez (explicit output)
+#' convertId2(c("ACTB", "GAPDH"), output = "entrez")
+#'
+#' # Return NA instead of a "///"-collapsed string for one-to-many mappings
+#' convertId2(c("ACTB", "GAPDH"), output = "entrez", multi2NA = TRUE)
 #' }
 #' @export
 convertId2 <- function(id, species = c("Human", "Mouse"),
-                       output = c("auto", "symbol", "ensembl"))
+                       output = c("auto", "symbol", "ensembl", "entrez"),
+                       multi2NA = FALSE)
 {
   species <- match.arg(species)
   output  <- match.arg(output)
@@ -160,8 +193,9 @@ convertId2 <- function(id, species = c("Human", "Mouse"),
   }
 
   # ---------------------------------------------------------------------------
-  # Helper: safe single-value lookup; returns NA on miss or if length > 1
-  # (length > 1 = ambiguous multi-Entrez mapping, discarded to preserve 1-to-1)
+  # Helper: strict single-value lookup for the intermediate Entrez hop; returns
+  # NA on miss or if length > 1 (ambiguous intermediate discarded to preserve
+  # the 1-to-1 correspondence, independent of 'multi2NA').
   # ---------------------------------------------------------------------------
   safe_get1 <- function(key, env) {
     if (AnnotationDbi::exists(key, envir = env)) {
@@ -172,10 +206,21 @@ convertId2 <- function(id, species = c("Human", "Mouse"),
     }
   }
 
-  # Helper: multi-value lookup collapsed to /// string; NA on miss
-  safe_get_multi <- function(key, env) {
+  # Helper: resolve a terminal lookup value honouring 'multi2NA'.
+  # length 0 or missing -> NA; length > 1 -> "///"-collapsed string, or NA when
+  # multi2NA = TRUE; length 1 -> the value (NA preserved).
+  resolve_multi <- function(val) {
+    if (length(val) == 0L) return(NA_character_)
+    if (length(val) > 1L) {
+      return(if (multi2NA) NA_character_ else paste(val, collapse = " /// "))
+    }
+    if (is.na(val[[1L]])) NA_character_ else as.character(val[[1L]])
+  }
+
+  # Helper: terminal single-key lookup (single-element path); NA on miss.
+  get_term <- function(key, env) {
     if (AnnotationDbi::exists(key, envir = env)) {
-      paste(get(key, envir = env), collapse = " /// ")
+      resolve_multi(get(key, envir = env))
     } else {
       NA_character_
     }
@@ -187,24 +232,30 @@ convertId2 <- function(id, species = c("Human", "Mouse"),
   if (length(id) == 1L) {
     result <- if (is_ensembl) {
       if (eff_output == "symbol") {
-        eg <- safe_get1(id, ensg2eg)
-        if (is.na(eg)) NA_character_ else safe_get1(eg, sym)
+        eg <- safe_get1(id, ensg2eg)                 # intermediate hop (strict)
+        if (is.na(eg)) NA_character_ else get_term(eg, sym)
+      } else if (eff_output == "entrez") {
+        get_term(id, ensg2eg)                        # ENSG -> Entrez (direct)
       } else {
-        id   # ensembl -> ensembl: return as-is
+        id                                           # ensembl -> ensembl: as-is
       }
     } else if (is_entrez) {
       if (eff_output == "symbol") {
-        safe_get1(id, sym)
+        get_term(id, sym)                            # Entrez -> symbol (direct)
+      } else if (eff_output == "entrez") {
+        id                                           # entrez -> entrez: as-is
       } else {
-        safe_get_multi(id, ensg)
+        get_term(id, ensg)                           # Entrez -> ENSG (direct)
       }
     } else {
       # symbol input
       if (eff_output == "ensembl") {
-        eg <- safe_get1(id, sym2eg)
-        if (is.na(eg)) NA_character_ else safe_get_multi(eg, ensg)
+        eg <- safe_get1(id, sym2eg)                  # intermediate hop (strict)
+        if (is.na(eg)) NA_character_ else get_term(eg, ensg)
+      } else if (eff_output == "entrez") {
+        get_term(id, sym2eg)                         # Symbol -> Entrez (direct)
       } else {
-        id   # symbol -> symbol: return as-is
+        id                                           # symbol -> symbol: as-is
       }
     }
     names(result) <- id
@@ -216,15 +267,16 @@ convertId2 <- function(id, species = c("Human", "Mouse"),
   # ---------------------------------------------------------------------------
   result <- if (is_ensembl) {
     if (eff_output == "symbol") {
-      # ENSG -> Entrez -> symbol (original logic preserved exactly)
+      # ENSG -> Entrez -> symbol; intermediate multi/NA Entrez dropped to "---"
       entrez <- mget(id, envir = ensg2eg, ifnotfound = NA)
       entrez <- sapply(entrez, function(x) {
         if (length(x) > 1L || is.na(x)) "---" else x
       })
       hugo <- mget(entrez, envir = sym, ifnotfound = NA)
-      sapply(hugo, function(x) {
-        if (length(x) > 1L) paste(x, collapse = " /// ") else x
-      })
+      sapply(hugo, resolve_multi)
+    } else if (eff_output == "entrez") {
+      # ENSG -> Entrez (direct)
+      sapply(mget(id, envir = ensg2eg, ifnotfound = NA), resolve_multi)
     } else {
       setNames(id, id)   # ensembl -> ensembl
     }
@@ -232,34 +284,27 @@ convertId2 <- function(id, species = c("Human", "Mouse"),
   } else if (is_entrez) {
     if (eff_output == "symbol") {
       # Entrez -> symbol (direct)
-      result_sym <- mget(id, envir = sym, ifnotfound = NA)
-      sapply(result_sym, function(x) {
-        if (length(x) > 1L)      paste(x, collapse = " /// ")
-        else if (is.na(x[[1L]])) NA_character_
-        else                     x[[1L]]
-      })
+      sapply(mget(id, envir = sym, ifnotfound = NA), resolve_multi)
+    } else if (eff_output == "entrez") {
+      setNames(id, id)   # entrez -> entrez
     } else {
       # Entrez -> ENSG (direct)
-      result_ensg <- mget(id, envir = ensg, ifnotfound = NA)
-      sapply(result_ensg, function(x) {
-        if (length(x) > 1L)      paste(x, collapse = " /// ")
-        else if (is.na(x[[1L]])) NA_character_
-        else                     x[[1L]]
-      })
+      sapply(mget(id, envir = ensg, ifnotfound = NA), resolve_multi)
     }
 
   } else {
     # Symbol input
     if (eff_output == "ensembl") {
-      # symbol -> Entrez -> ENSG (original logic preserved exactly)
+      # symbol -> Entrez -> ENSG; intermediate multi/NA Entrez dropped to "---"
       entrez <- mget(id, envir = sym2eg, ifnotfound = NA)
       entrez <- sapply(entrez, function(x) {
         if (length(x) > 1L || is.na(x)) "---" else x
       })
       result_ensg <- mget(entrez, envir = ensg, ifnotfound = NA)
-      sapply(result_ensg, function(x) {
-        if (length(x) > 1L) paste(x, collapse = " /// ") else x
-      })
+      sapply(result_ensg, resolve_multi)
+    } else if (eff_output == "entrez") {
+      # symbol -> Entrez (direct)
+      sapply(mget(id, envir = sym2eg, ifnotfound = NA), resolve_multi)
     } else {
       setNames(id, id)   # symbol -> symbol
     }

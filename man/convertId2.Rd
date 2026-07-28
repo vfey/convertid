@@ -7,7 +7,8 @@
 convertId2(
   id,
   species = c("Human", "Mouse"),
-  output = c("auto", "symbol", "ensembl")
+  output = c("auto", "symbol", "ensembl", "entrez"),
+  multi2NA = FALSE
 )
 }
 \arguments{
@@ -19,8 +20,8 @@ Input type is detected automatically from the first non-NA element.}
 \item{species}{(\code{character}). One of \code{"Human"} or \code{"Mouse"}.
 Defaults to \code{"Human"}.}
 
-\item{output}{(\code{character}). One of \code{"auto"}, \code{"symbol"}, or
-\code{"ensembl"}. Controls the return type:
+\item{output}{(\code{character}). One of \code{"auto"}, \code{"symbol"},
+\code{"ensembl"}, or \code{"entrez"}. Controls the return type:
 \describe{
   \item{\code{"auto"}}{Automatic: Ensembl input returns symbols, symbol
     input returns Ensembl IDs, Entrez input returns symbols.}
@@ -28,8 +29,26 @@ Defaults to \code{"Human"}.}
   \item{\code{"ensembl"}}{Always return Ensembl gene IDs regardless of input
     type. Useful when converting Entrez IDs to Ensembl IDs for downstream
     processing.}
+  \item{\code{"entrez"}}{Always return Entrez gene IDs regardless of input
+    type. Useful for offline, network-independent retrieval of Entrez IDs
+    (e.g. for KEGG pathway enrichment) as a fast alternative to a BioMart
+    query.}
 }
-Defaults to \code{"auto"}.}
+Defaults to \code{"auto"}. Note that \code{"auto"} never yields Entrez IDs;
+request them explicitly with \code{output = "entrez"}.}
+
+\item{multi2NA}{(\code{logical}). Controls how one-to-many mappings are
+resolved in the returned vector. When a query ID maps to more than one
+target ID (e.g. one gene symbol resolving to several Ensembl or Entrez
+IDs), \code{multi2NA = FALSE} (the default) collapses all hits into a
+single string separated by \code{" /// "}, whereas \code{multi2NA = TRUE}
+returns \code{NA} for that entry. Set \code{multi2NA = TRUE} when the
+result must contain at most one ID per input for downstream use (at the
+cost of possible \code{NA}s). This setting applies to all output types.
+Note that the \emph{intermediate} Entrez step used for
+Ensembl-to-symbol and symbol-to-Ensembl conversion is always resolved
+strictly (an ambiguous intermediate is dropped to \code{NA}) regardless
+of \code{multi2NA}. Defaults to \code{FALSE}.}
 }
 \value{
 A named character vector of the same length and order as \code{id},
@@ -44,21 +63,26 @@ A named character vector of the same length and order as \code{id},
     returned as \code{NA}.
 }
 \details{
-Conversion is performed via Entrez gene IDs as an intermediate step:
+Conversion routes, depending on input type and \code{output}:
 \itemize{
   \item Ensembl \eqn{\rightarrow} Entrez \eqn{\rightarrow} symbol
+  \item Ensembl \eqn{\rightarrow} Entrez (direct)
   \item Symbol \eqn{\rightarrow} Entrez \eqn{\rightarrow} Ensembl
+  \item Symbol \eqn{\rightarrow} Entrez (direct)
   \item Entrez \eqn{\rightarrow} symbol (direct)
   \item Entrez \eqn{\rightarrow} Ensembl (direct)
 }
-Entries are returned as \code{NA} in two cases:
-\itemize{
-  \item The input ID is not found in the annotation database.
-  \item The input ID maps to more than one Entrez gene ID. Such ambiguous
-    mappings are discarded rather than returning multiple values, in order
-    to strictly preserve the 1-to-1 correspondence between input and output
-    vectors.
-}
+When input and output type coincide (e.g. Ensembl input with
+\code{output = "ensembl"}) the input is returned unchanged.
+
+Entries are returned as \code{NA} when the input ID is not found in the
+annotation database. One-to-many mappings in the final lookup are governed
+by \code{multi2NA}: collapsed into a \code{" /// "}-separated string by
+default, or returned as \code{NA} when \code{multi2NA = TRUE}. The
+intermediate Entrez step used for Ensembl-to-symbol and symbol-to-Ensembl
+conversion is always resolved strictly: an input mapping to more than one
+Entrez gene ID at that step is dropped to \code{NA} to preserve the 1-to-1
+correspondence between input and output vectors.
 Input type is detected automatically from the first non-NA element of
 \code{id}: IDs matching the species Ensembl prefix (\code{ENSG} for Human,
 \code{ENSMU} for Mouse) are treated as Ensembl gene IDs; purely numeric
@@ -84,6 +108,16 @@ convertId2(c("60", "2597"))
 # Entrez -> Ensembl (explicit output)
 convertId2("60", output = "ensembl")
 convertId2(c("60", "2597"), output = "ensembl")
+
+# Ensembl -> Entrez (explicit output)
+convertId2("ENSG00000075624", output = "entrez")
+convertId2(c("ENSG00000075624", "ENSG00000111640"), output = "entrez")
+
+# Symbol -> Entrez (explicit output)
+convertId2(c("ACTB", "GAPDH"), output = "entrez")
+
+# Return NA instead of a "///"-collapsed string for one-to-many mappings
+convertId2(c("ACTB", "GAPDH"), output = "entrez", multi2NA = TRUE)
 }
 }
 \seealso{
