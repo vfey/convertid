@@ -1,3 +1,4 @@
+*Rproj
 .RData
 .Rbuildignore
 .Rhistory
@@ -6,5 +7,6 @@
 .project
 .settings
 .DS_Store
-inst/doc
 .positai
+inst/doc
+cran-comments.md
