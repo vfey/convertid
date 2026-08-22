@@ -157,24 +157,6 @@ try_biomart <- function(genes, host, fallback_hosts, verbose) {
   )
 }
 
-#' Test if a Biomart connection exists
-#'
-#' The function tries to establish an actual BioMart session and catches the error
-#' if that fails.
-#' @return TRUE or FALSE depending on the test outcome.
-#' @keywords internal
-#' @noRd
-skip_if_biomart_unavailable <- function() {
-  available <- tryCatch(
-    {
-      mart <- biomaRt::useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl")
-      TRUE
-    },
-    error = function(e) FALSE
-  )
-  testthat::skip_if_not(available, "BioMart is not available")
-}
-
 #' Try a function across BioMart hosts with fallback
 #'
 #' @param fn Function that takes a host URL and returns a result.
