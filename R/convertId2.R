@@ -329,7 +329,11 @@ convertId2 <- function(id, species = c("Human", "Mouse"),
 #' }
 #' @seealso \code{\link[AnnotationDbi]{select}}
 #' @examples
-#' convert.alias("TRPV4")
+#' \donttest{
+#' if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+#'   convert.alias("TRPV4")
+#' }
+#' }
 #' @export
 convert.alias <-
   function(id, species = c("Human", "Mouse"), db = NULL)
