@@ -7,6 +7,9 @@
 #' BiocFileCache::BiocFileCache()
 #' @param result character; name of the file written to chache
 #' @param hash unique hash representing a query.
+#' @return Invisibly, \code{TRUE} if the value was added to the cache and
+#' \code{FALSE} if an entry with the same hash already existed.
+#' @keywords internal
 .addToCache <- function(bfc, result, hash) {
 
   if(!dir.exists(.biomartCacheLocation()))
@@ -33,6 +36,8 @@
 #' @param bfc Object of class BiocFileCache, created by a call to
 #' BiocFileCache::BiocFileCache()
 #' @param hash unique hash representing a query.
+#' @return The cached R object stored under \code{hash}.
+#' @keywords internal
 .readFromCache <- function(bfc, hash) {
 
   cache_hits <- bfcquery(bfc, hash, field = "rname")
@@ -51,10 +56,11 @@
 #' BiocFileCache::BiocFileCache()
 #' @param hash unique hash representing a query.
 #' @param verbose logical; should additional verbose output be printed? Not currently used.
-#'
-#' This function returns TRUE if a record with the requested hash already
+#' @details This function returns TRUE if a record with the requested hash already
 #' exists in the file cache, otherwise returns FALSE.
-#' @keywords Internal
+#' @return \code{TRUE} if a record with the requested hash exists in the file
+#' cache, otherwise \code{FALSE}.
+#' @keywords internal
 .checkInCache <- function(bfc, hash, verbose = FALSE) {
   res <- bfcquery(bfc, query = hash, field = "rname")
   as.logical(nrow(res))
