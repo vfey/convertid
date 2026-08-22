@@ -14,6 +14,11 @@ BiocFileCache::BiocFileCache()}
 
 \item{hash}{unique hash representing a query.}
 }
+\value{
+Invisibly, \code{TRUE} if the value was added to the cache and
+\code{FALSE} if an entry with the same hash already existed.
+}
 \description{
 Add values to cache
 }
+\keyword{internal}

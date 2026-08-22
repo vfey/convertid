@@ -12,6 +12,10 @@ BiocFileCache::BiocFileCache()}
 
 \item{hash}{unique hash representing a query.}
 }
+\value{
+The cached R object stored under \code{hash}.
+}
 \description{
 Read values from cache
 }
+\keyword{internal}

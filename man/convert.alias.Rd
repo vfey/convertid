@@ -27,7 +27,11 @@ A \code{data.frame} with two columns:
     There are species presets for Human and Mouse annotations.
 }
 \examples{
-convert.alias("TRPV4")
+\donttest{
+if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+  convert.alias("TRPV4")
+}
+}
 }
 \seealso{
 \code{\link[AnnotationDbi]{select}}

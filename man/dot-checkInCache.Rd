@@ -12,12 +12,17 @@ BiocFileCache::BiocFileCache()}
 
 \item{hash}{unique hash representing a query.}
 
-\item{verbose}{logical; should additional verbose output be printed? Not currently used.
-
-This function returns TRUE if a record with the requested hash already
-exists in the file cache, otherwise returns FALSE.}
+\item{verbose}{logical; should additional verbose output be printed? Not currently used.}
+}
+\value{
+\code{TRUE} if a record with the requested hash exists in the file
+cache, otherwise \code{FALSE}.
 }
 \description{
 Check whether value in cache exists
 }
-\keyword{Internal}
+\details{
+This function returns TRUE if a record with the requested hash already
+exists in the file cache, otherwise returns FALSE.
+}
+\keyword{internal}
