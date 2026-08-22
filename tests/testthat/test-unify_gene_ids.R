@@ -187,8 +187,13 @@ testthat::test_that("unify_gene_ids errors on empty input", {
 # unify_gene_ids(): column name restoration
 # ---------------------------------------------------------------------------
 testthat::test_that("original column names are restored in output", {
-  mockery::stub(unify_gene_ids, "try_biomart", function(genes, ...) genes)
-  mockery::stub(unify_gene_ids, "convertid::convertId2",
+  # Mirror the graceful-degradation return of try_biomart(): the hgnc_symbol
+  # column is always present, filled with NA when every host failed.
+  mockery::stub(unify_gene_ids, "try_biomart", function(genes, ...) {
+    genes$hgnc_symbol <- NA_character_
+    genes
+  })
+  mockery::stub(unify_gene_ids, "convertId2",
     function(x) rep(NA_character_, length(x)))
   input <- fixture_genes_bm
   names(input)[names(input) == "ensembl_gene_id"] <- "gene_id"
@@ -255,7 +260,7 @@ testthat::test_that("unify_gene_ids produces correct output with mocked BioMart"
           by = "ensembl_gene_id", all.x = TRUE)
   })
   # Stub convertId2 to return known values
-  mockery::stub(unify_gene_ids, "convertid::convertId2", function(x) {
+  mockery::stub(unify_gene_ids, "convertId2", function(x) {
     lookup <- c(
       "ENSG00000075624" = "ACTB",
       "ENSG00000111640" = "GAPDH",
