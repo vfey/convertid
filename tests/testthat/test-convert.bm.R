@@ -206,7 +206,7 @@ testthat::test_that("result row count equals input row count", {
 # ---------------------------------------------------------------------------
 testthat::test_that("convert.bm returns correct symbols with live BioMart", {
   testthat::skip_on_cran()
-  testthat::skip_if_offline()
+  skip_if_biomart_unavailable()
 
   dat <- data.frame(
     ID = c("ENSG00000075624", "ENSG00000111640"),
