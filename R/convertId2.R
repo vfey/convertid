@@ -342,22 +342,19 @@ convert.alias <-
       stop("Need input ID vector!")
     if (is.null(db)) {
       species <- match.arg(species)
-      if (!requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+      orgpkg <- switch(species,
+                       Human = "org.Hs.eg.db",
+                       Mouse = "org.Mm.eg.db"
+      )
+      if (!requireNamespace(orgpkg, quietly = TRUE)) {
         stop(
-          "The Bioconductor package 'org.Hs.eg.db' is required for this function.\n",
-          "Install it via BiocManager::install('org.Hs.eg.db').",
+          sprintf("The Bioconductor package '%s' is required for this function.\n", orgpkg),
+          sprintf("Install it via BiocManager::install('%s').", orgpkg),
           call. = FALSE
         )
       }
       # Get the namespace without using ::
-      orgdb <- switch(species,
-                      Human=getNamespace("org.Hs.eg.db"),
-                      Mouse=getNamespace("org.Mm.eg.db")
-      )
-      db <- switch(species,
-                   Human=orgdb[["org.Hs.eg.db"]],
-                   Mouse=orgdb[["org.Mm.eg.db"]]
-      )
+      db <- getNamespace(orgpkg)[[orgpkg]]
     }
     syms <- plyr::ldply(id, function(i) {
       i1 <- stringr::str_to_title(i)
@@ -443,7 +440,17 @@ convert.bm <-
     if (!biom.filter %in% biom.attributes) {
       biom.attributes <- c(biom.filter, biom.attributes)
     }
-    biom.ids <- get.bm(values, biom.data.set, biom.mart, host, biom.filter, biom.attributes, biom.cache, use.cache, biomart.fallback, chunk.size, verbose = verbose)
+    biom.ids <- get.bm(values           = values,
+                       biom.data.set    = biom.data.set,
+                       biom.mart        = biom.mart,
+                       host             = host,
+                       biom.filter      = biom.filter,
+                       biom.attributes  = biom.attributes,
+                       biom.cache       = biom.cache,
+                       use.cache        = use.cache,
+                       biomart.fallback = biomart.fallback,
+                       chunk.size       = chunk.size,
+                       verbose          = verbose)
     gene.lab <- merge(biom.ids, dat, by.x=biom.filter, by.y=id, all.y=TRUE, all.x=FALSE, sort=TRUE)
     if (rm.dups) {
       if (verbose) message("  Removing ", length(which(duplicated(gene.lab[[biom.filter]]))), " duplicated row(s)...")
