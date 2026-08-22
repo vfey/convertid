@@ -437,7 +437,7 @@ likely_symbol <-
                      "previous_symbol", "sp.x", "all_symbols")]
       names(dhg) <- c("orig_input", "organism", "current_symbols", "likely_symbol",
                       "previous_symbol", "input_symbol", "all_symbols")
-      cat("\n\n")
+      if (verbose) cat("\n\n")
       if (output == "likely") {
         return(dhg[, c("likely_symbol", "input_symbol")])
       } else if (output == "symbols") {
