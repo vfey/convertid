@@ -174,16 +174,31 @@ dedup_gene_ids <- function(genes, has_symbols, has_ensg2, verbose = FALSE) {
       x <- apply_filters(x, dedup_filters_by_name, force_single = FALSE)
     }
 
-    # Fix hgnc_symbol if it is a raw ENSG placeholder, provided gene_name
-    # is a proper symbol (not itself an ENSG ID)
-    needs_fix <- grepl("^ENSG", x$hgnc_symbol) &
-                 !grepl("^ENSG", x$gene_name) &
-                 x$gene_name != x$hgnc_symbol
-    x$hgnc_symbol[needs_fix & !is.na(x$hgnc_symbol_2)] <-
-      x$hgnc_symbol_2[needs_fix & !is.na(x$hgnc_symbol_2)]
-    x$hgnc_symbol[needs_fix &  is.na(x$hgnc_symbol_2)] <-
-      if (has_symbols) x$gene_name[needs_fix & is.na(x$hgnc_symbol_2)]
-      else             x$ensembl_gene_id[needs_fix & is.na(x$hgnc_symbol_2)]
+    # Fix hgnc_symbol if it is a raw ENSG placeholder. When gene_name is
+    # available the replacement is applied only if gene_name is itself a proper
+    # symbol (not an ENSG ID) and differs from hgnc_symbol. In ENSG-only mode
+    # there is no gene_name column, so every placeholder qualifies -- note that
+    # x$gene_name would be NULL there, which would silently collapse the
+    # condition to length zero and disable the fix altogether.
+    is_placeholder <- grepl("^ENSG", x$hgnc_symbol)
+    if (has_symbols) {
+      needs_fix <- is_placeholder &
+                   !is.na(x$gene_name) &
+                   !grepl("^ENSG", x$gene_name) &
+                   x$gene_name != x$hgnc_symbol
+    } else {
+      needs_fix <- is_placeholder
+    }
+    # Guard against NA from any of the comparisons above: NA indices are not
+    # allowed in subscripted assignment and would abort the whole call.
+    needs_fix[is.na(needs_fix)] <- FALSE
+
+    from_symbol2  <- needs_fix & !is.na(x$hgnc_symbol_2)
+    from_fallback <- needs_fix &  is.na(x$hgnc_symbol_2)
+    x$hgnc_symbol[from_symbol2] <- x$hgnc_symbol_2[from_symbol2]
+    x$hgnc_symbol[from_fallback] <-
+      if (has_symbols) x$gene_name[from_fallback]
+      else             x$ensembl_gene_id[from_fallback]
     x
   })
 
