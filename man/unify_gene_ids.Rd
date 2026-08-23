@@ -55,7 +55,7 @@ informative error if missing.
 \strong{Deduplication passes}
 
 The function performs two sequential deduplication passes via the internal
-\code{dedup_gene_ids()} function:
+\code{.dedup_gene_ids()} function:
 \enumerate{
   \item Deduplicate by \code{gene_name} (if available) or \code{ensembl_gene_id},
     resolving multiple ENSG IDs mapping to the same gene name.
