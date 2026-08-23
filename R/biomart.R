@@ -66,6 +66,16 @@
   as.logical(nrow(res))
 }
 
+#' Unexported functions
+#' Report the \emph{\code{biomaRt}} cache location
+#' @description \command{.biomartCacheLocation()} returns the path held in the
+#' BIOMART_CACHE environment variable, falling back to the \code{rappdirs}
+#' user cache directory for the \emph{\code{biomaRt}} application when that
+#' variable is unset. Copied from the \emph{\code{biomaRt}} package to avoid a
+#' ':::' operator.
+#' @return (\code{character}) of length one. The cache directory path.
+#' @seealso \code{\link[rappdirs]{user_cache_dir}}
+#' @keywords internal
 .biomartCacheLocation <- function() {
   Sys.getenv(x = "BIOMART_CACHE",
              unset = rappdirs::user_cache_dir(appname="biomaRt"))
@@ -73,11 +83,35 @@
 
 ## from 'ensembl_ssl_settings.R'.
 
+#' Unexported functions
+#' Probe the Ensembl hosts over HTTPS
+#' @description \command{.test_ensembl()} issues two short \command{GET()}
+#' requests against the main and US East Ensembl sites. It exists so that
+#' \command{.checkEnsemblSSL()} can provoke, and then inspect, whatever SSL
+#' error the local system produces. Copied from the \emph{\code{biomaRt}}
+#' package to avoid a ':::' operator.
+#' @return The response of the second request, invisibly; the function is
+#' called for the error it raises, not for its value.
+#' @seealso \code{\link[httr]{GET}}
+#' @keywords internal
 .test_ensembl <- function() {
   httr::GET("https://www.ensembl.org/index.html", timeout(5), set_cookies(redirect_mirror = "no"))
   httr::GET("https://useast.ensembl.org/index.html", timeout(5), set_cookies(redirect_mirror = "no"))
 }
 
+#' Unexported functions
+#' Determine the CURL SSL options an Ensembl connection needs
+#' @description \command{.checkEnsemblSSL()} probes the Ensembl hosts and, when
+#' the connection fails, inspects the error to decide which \command{httr}
+#' configuration works around it: a lowered cipher security level for the
+#' 'sslv3 alert handshake failure' seen on Ubuntu 20.04 and relatives, or
+#' disabled peer verification for missing issuer certificates. A timeout, or an
+#' error it does not recognise, ends the probing. The function is a modified
+#' version of \code{.checkEnsemblSSL} from the \emph{\code{biomaRt}} package.
+#' @return A \code{list} of \code{request} objects holding the CURL options
+#' that were needed; empty when the plain connection already works.
+#' @seealso \code{\link[httr]{config}}, \code{\link{.test_ensembl}}
+#' @keywords internal
 .checkEnsemblSSL <- function() {
 
   ## we'll modify the global httr setting in this function
