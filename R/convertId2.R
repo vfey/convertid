@@ -247,6 +247,16 @@ convertId2 <- function(id, species = c("Human", "Mouse"),
   # ---------------------------------------------------------------------------
   first_id   <- id[!is.na(id)][1L]
   is_ensembl <- length(grep(ensg_pfx, first_id)) > 0L
+  # An input that is empty, or holds nothing but NA, has no type to detect:
+  # first_id is NA, the grepl() below would yield NA, and the branching further
+  # down would abort with "missing value where TRUE/FALSE needed". Return the
+  # all-NA result the output contract calls for instead.
+  if (is.na(first_id)) {
+    result <- rep(NA_character_, length(id))
+    names(result) <- id
+    return(result)
+  }
+
   is_entrez  <- !is_ensembl && grepl("^[0-9]+$", first_id)
   # otherwise: symbol
 
@@ -417,7 +427,7 @@ convert.alias <-
 #' It takes a matrix or data frame with the IDs to be converted in one column or as row names as input and returns a data frame with additional
 #' annotations after cleaning the fetched annotations and merging them with the input data frame.
 #' @param dat \code{matrix} or \code{data.frame}. Matrix or data frame with the ids to be converted in a column or as row names.
-#' @param id \code{character}. Name of the column with the ids to be converted, special name "rownames" will use the row names.
+#' @param id \code{character}. Name of the column with the ids to be converted; the special names "row.names" and "rownames" both select the row names.
 #' @param biom.data.set \code{character} of length one. Biomart data set to use.
 #' @param biom.mart \code{character} vector. Biomart to use (uses the first element of the vector), defaults to "ensembl".
 #' @param host \code{character} of length one. Host URL.
@@ -463,7 +473,7 @@ convert.bm <-
            rm.dups=FALSE,
            verbose = FALSE)
   {
-    if (id=="row.names") {
+    if (id %in% c("row.names", "rownames")) {
       values <- rownames(dat)
     } else {
       values <- dat[[id]]
@@ -512,8 +522,17 @@ convert.bm <-
 #' @param biom.attributes \code{character} vector. Biomart attributes, i.e., type of desired result(s); make sure query id type is included!
 #' @param biom.cache \code{character}. Path name giving the location of the cache \command{getBM()} uses if \code{use.cache=TRUE}. Defaults to the value in the \emph{BIOMART_CACHE} environment variable.
 #' @param use.cache (\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.
+#' @param biomart.fallback \code{character} vector. Fallback host URLs to try if the primary
+#'   \code{host} fails. Set to \code{NULL} to disable fallback. Defaults to Ensembl mirror sites.
+#' @param chunk.size \code{integer} of length one. Maximum number of IDs per BioMart query.
+#'   Large ID lists are split into chunks of this size to avoid server timeouts.
+#'   Set to \code{Inf} to disable chunking. Defaults to \code{500}.
 #' @param keep.original (\code{logical}). Should the order and length of the input vector be preserved, i.e., should also IDs missing after conversion be kept? Defaults to \code{TRUE}.
 #' @param verbose (\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.
+#' @details If \code{biomart = TRUE} but every BioMart host fails, a warning is emitted
+#'   and the function degrades to the same route it would have taken with
+#'   \code{biomart = FALSE}: the data frame in \code{lab} if one was supplied, otherwise
+#'   \command{convertId2()}.
 #' @return A character vector of Gene Symbols.
 #' @seealso \command{\link[convertid]{get.bm}}
 #' @examples
@@ -534,22 +553,40 @@ todisp2 <- function(ensg,
                     biom.attributes = c("ensembl_gene_id", "hgnc_symbol"),
                     biom.cache = rappdirs::user_cache_dir("biomaRt"),
                     use.cache = TRUE,
+                    biomart.fallback = c("https://useast.ensembl.org",
+                                         "https://uswest.ensembl.org",
+                                         "https://asia.ensembl.org"),
+                    chunk.size = 500L,
                     keep.original = TRUE,
                     verbose = FALSE)
 {
+  sym <- NULL
   if (biomart) {
     if (!length(grep("^ENS[A-Z]{0,}[0-9]{11}", ensg[1]))) {
       if (verbose) message("    Input is not Ensembl Gene IDs. Doing nothing.")
       return(ensg)
     }
-    sym <- get.bm(ensg, biom.data.set=biom.data.set, biom.mart=biom.mart, host=host,
-                  biom.filter=biom.filter, biom.attributes=biom.attributes,
-                  biom.cache = biom.cache, use.cache = use.cache,
-                  verbose = verbose)
-  } else if(!is.null(lab)) {
+    # get.bm() raises an error once every host in 'biomart.fallback' has failed.
+    # Catch it so that the documented degradation to 'lab' or convertId2() can
+    # take place rather than the whole call aborting.
+    sym <- tryCatch(
+      get.bm(ensg, biom.data.set=biom.data.set, biom.mart=biom.mart, host=host,
+             biom.filter=biom.filter, biom.attributes=biom.attributes,
+             biom.cache = biom.cache, use.cache = use.cache,
+             biomart.fallback = biomart.fallback, chunk.size = chunk.size,
+             verbose = verbose),
+      error = function(e) {
+        warning("BioMart query failed (", conditionMessage(e), "). Falling back to ",
+                if (!is.null(lab)) "the supplied data frame." else "'AnnotationDbi'.",
+                call. = FALSE)
+        NULL
+      }
+    )
+  }
+  if (is.null(sym) && !is.null(lab)) {
     if (verbose) message("  Using input data frame for ID conversion...")
     sym <- data.frame(ensembl_gene_id=rownames(lab), hgnc_symbol=lab[, 1], stringsAsFactors=FALSE)
-  } else {
+  } else if (is.null(sym)) {
     if (verbose) message("  Using 'AnnotationDbi framework for ID conversion...")
     sym <- convertId2(ensg)
     if (length(sym) == 1 && is.na(sym)) {
