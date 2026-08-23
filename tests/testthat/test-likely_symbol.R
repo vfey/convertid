@@ -5,7 +5,8 @@
 #   - output = "likely", "symbols", "all" return correct columns
 #   - Symbol resolution: current, alias, previous, unrecognised
 #   - alias_sym and prev_sym flags
-#   - index_threshold: correct path selection, identical results from both paths
+#   - index_threshold: correct path selection, identical results from both paths,
+#     including aliases listed after the first and whitespace-padded aliases
 #   - Session cache: reused on second call, bypassed when hgnc supplied
 #   - refresh = TRUE forces re-download and updates cache timestamp
 #   - Stale cache (> 3 days) emits a warning message
@@ -184,6 +185,92 @@ testthat::test_that("both paths produce identical results for batch input", {
   r_scan  <- r_scan[order(r_scan$input_symbol), ]
   r_index <- r_index[order(r_index$input_symbol), ]
   testthat::expect_equal(r_scan, r_index)
+})
+
+# ---------------------------------------------------------------------------
+# index_threshold: aliases beyond the first
+#
+# The index path used to record only the first alias of a matched gene, so a
+# query naming any later alias was found by the index but then lost in the
+# re-match, and the input was echoed back instead of the current symbol. The
+# main fixture cannot catch this: each of its genes has a single alias, and
+# CCBL1 happens to be first. These fixtures give the genes several aliases.
+# ---------------------------------------------------------------------------
+hgnc_fixture_multi <- data.frame(
+  symbol       = c("ACTB", "KYAT1",          "BRCA1"),
+  alias_symbol = c("",     "CCBL1|KAT1|GTK", "RNF53|BRCC1|PPP1R53"),
+  prev_symbol  = c("",     "KAAT1",          ""),
+  stringsAsFactors = FALSE
+)
+
+# Same table with padding around the separator, as HGNC exports have carried
+# in the past. The index is built from trimmed tokens, so the row-scan has to
+# trim as well or the two paths disagree.
+hgnc_fixture_ws <- data.frame(
+  symbol       = c("ACTB", "KYAT1"),
+  alias_symbol = c("",     "CCBL1 | KAT1 | GTK"),
+  prev_symbol  = c("",     ""),
+  stringsAsFactors = FALSE
+)
+
+testthat::test_that("row-scan resolves an alias that is not listed first", {
+  result <- likely_symbol("PPP1R53", hgnc = hgnc_fixture_multi,
+                          index_threshold = 99L, output = "likely", verbose = FALSE)
+  testthat::expect_equal(result$likely_symbol, "BRCA1")
+})
+
+testthat::test_that("index resolves an alias that is not listed first", {
+  result <- likely_symbol("PPP1R53", hgnc = hgnc_fixture_multi,
+                          index_threshold = 1L, output = "likely", verbose = FALSE)
+  testthat::expect_equal(result$likely_symbol, "BRCA1")
+})
+
+testthat::test_that("both paths agree on aliases at every position", {
+  syms    <- c("CCBL1", "KAT1", "GTK", "RNF53", "BRCC1", "PPP1R53")
+  r_scan  <- likely_symbol(syms, hgnc = hgnc_fixture_multi,
+                            index_threshold = 99L, output = "likely", verbose = FALSE)
+  r_index <- likely_symbol(syms, hgnc = hgnc_fixture_multi,
+                            index_threshold = 1L,  output = "likely", verbose = FALSE)
+  r_scan  <- r_scan[order(r_scan$input_symbol), ]
+  r_index <- r_index[order(r_index$input_symbol), ]
+  testthat::expect_equal(r_scan, r_index)
+  testthat::expect_equal(
+    r_index$likely_symbol[r_index$input_symbol == "GTK"], "KYAT1")
+  testthat::expect_equal(
+    r_index$likely_symbol[r_index$input_symbol == "BRCC1"], "BRCA1")
+})
+
+# read.delim() uses na.strings = "NA", so an HGNC field holding the literal
+# string "NA" arrives as NA_character_. Building the index over such a field
+# used to reach exists(NA_character_, ...), which aborts.
+hgnc_fixture_na <- data.frame(
+  symbol       = c("ACTB",        "KYAT1"),
+  alias_symbol = c(NA_character_, "CCBL1|KAT1"),
+  prev_symbol  = c(NA_character_, NA_character_),
+  stringsAsFactors = FALSE
+)
+
+testthat::test_that("NA fields do not break the index path", {
+  result <- likely_symbol("CCBL1", hgnc = hgnc_fixture_na,
+                          index_threshold = 1L, output = "likely", verbose = FALSE)
+  testthat::expect_equal(result$likely_symbol, "KYAT1")
+})
+
+testthat::test_that("both paths agree in the presence of NA fields", {
+  r_scan  <- likely_symbol("CCBL1", hgnc = hgnc_fixture_na,
+                            index_threshold = 99L, output = "likely", verbose = FALSE)
+  r_index <- likely_symbol("CCBL1", hgnc = hgnc_fixture_na,
+                            index_threshold = 1L,  output = "likely", verbose = FALSE)
+  testthat::expect_equal(r_scan, r_index)
+})
+
+testthat::test_that("both paths agree when aliases are padded with whitespace", {
+  r_scan  <- likely_symbol("KAT1", hgnc = hgnc_fixture_ws,
+                            index_threshold = 99L, output = "likely", verbose = FALSE)
+  r_index <- likely_symbol("KAT1", hgnc = hgnc_fixture_ws,
+                            index_threshold = 1L,  output = "likely", verbose = FALSE)
+  testthat::expect_equal(r_scan, r_index)
+  testthat::expect_equal(r_index$likely_symbol, "KYAT1")
 })
 
 # ---------------------------------------------------------------------------

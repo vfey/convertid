@@ -1,7 +1,7 @@
-# Tests for unify_gene_ids() and dedup_gene_ids()
+# Tests for unify_gene_ids() and .dedup_gene_ids()
 #
-# dedup_gene_ids() is the internal deduplication function and is tested
-# directly via convertid:::dedup_gene_ids() using a pre-computed fixture,
+# .dedup_gene_ids() is the internal deduplication function and is tested
+# directly via convertid:::.dedup_gene_ids() using a pre-computed fixture,
 # avoiding any network calls.
 #
 # unify_gene_ids() is tested for input validation, argument handling, verbose
@@ -21,50 +21,50 @@ fixture_path <- testthat::test_path("fixtures", "fixture_genes_bm.rda")
 load(fixture_path)   # loads: fixture_genes_bm
 
 # ---------------------------------------------------------------------------
-# dedup_gene_ids(): output structure
+# .dedup_gene_ids(): output structure
 # ---------------------------------------------------------------------------
-testthat::test_that("dedup_gene_ids returns a data frame", {
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+testthat::test_that(".dedup_gene_ids returns a data frame", {
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   testthat::expect_s3_class(result, "data.frame")
 })
 
-testthat::test_that("dedup_gene_ids output has no duplicate hgnc_symbols", {
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+testthat::test_that(".dedup_gene_ids output has no duplicate hgnc_symbols", {
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   testthat::expect_false(any(duplicated(result$hgnc_symbol)))
 })
 
-testthat::test_that("dedup_gene_ids output has no duplicate ensembl_gene_ids", {
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+testthat::test_that(".dedup_gene_ids output has no duplicate ensembl_gene_ids", {
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   testthat::expect_false(any(duplicated(result$ensembl_gene_id)))
 })
 
-testthat::test_that("dedup_gene_ids output has no NA hgnc_symbols", {
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+testthat::test_that(".dedup_gene_ids output has no NA hgnc_symbols", {
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   testthat::expect_false(any(is.na(result$hgnc_symbol)))
 })
 
-testthat::test_that("dedup_gene_ids reduces 8 input rows to 5 unique genes", {
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+testthat::test_that(".dedup_gene_ids reduces 8 input rows to 5 unique genes", {
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   testthat::expect_equal(nrow(result), 5L)
 })
 
 # ---------------------------------------------------------------------------
-# dedup_gene_ids(): deduplication logic
+# .dedup_gene_ids(): deduplication logic
 # ---------------------------------------------------------------------------
 testthat::test_that("single-mapping genes retained with correct symbol (ACTB, GAPDH)", {
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   testthat::expect_equal(
     result$hgnc_symbol[result$ensembl_gene_id == "ENSG00000075624"], "ACTB")
   testthat::expect_equal(
@@ -74,10 +74,10 @@ testthat::test_that("single-mapping genes retained with correct symbol (ACTB, GA
 testthat::test_that("AnnotationDbi-confirmed ENSG ID preferred for AKAP17A", {
   # ENSG00000197976 has hgnc_symbol_2 == AKAP17A and is first in ensg_2 list;
   # ENSG00000292343 also has hgnc_symbol_2 == AKAP17A but is newer.
-  # filter_ensg2_first picks ENSG00000197976.
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+  # .filter_ensg2_first picks ENSG00000197976.
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   akap_row <- result[result$hgnc_symbol == "AKAP17A", ]
   testthat::expect_equal(nrow(akap_row), 1L)
   testthat::expect_equal(akap_row$ensembl_gene_id, "ENSG00000197976")
@@ -86,11 +86,11 @@ testthat::test_that("AnnotationDbi-confirmed ENSG ID preferred for AKAP17A", {
 testthat::test_that("ENSG placeholder resolved via hgnc_symbol_2 for BMS1P4", {
   # ENSG00000242338: hgnc_symbol == BMS1P4, hgnc_symbol_2 == NA
   # ENSG00000271816: hgnc_symbol == ENSG..., hgnc_symbol_2 == BMS1P4
-  # filter_prefer_confirmed discards ENSG00000242338; needs_fix resolves
+  # .filter_prefer_confirmed discards ENSG00000242338; needs_fix resolves
   # ENSG00000271816's placeholder to BMS1P4.
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   bms_row <- result[result$hgnc_symbol == "BMS1P4", ]
   testthat::expect_equal(nrow(bms_row), 1L)
   testthat::expect_equal(bms_row$ensembl_gene_id, "ENSG00000271816")
@@ -98,56 +98,56 @@ testthat::test_that("ENSG placeholder resolved via hgnc_symbol_2 for BMS1P4", {
 
 testthat::test_that("newer ENSG preferred when all metadata identical (HLA-H)", {
   # Both HLA-H rows have identical hgnc_symbol, hgnc_symbol_2, ensg_2.
-  # filter_ensg2_first picks ENSG00000310469 (first in ensg_2 list).
-  result <- convertid:::dedup_gene_ids(fixture_genes_bm,
-                                       has_symbols = TRUE,
-                                       has_ensg2   = TRUE)
+  # .filter_ensg2_first picks ENSG00000310469 (first in ensg_2 list).
+  result <- convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                        has_symbols = TRUE,
+                                        has_ensg2   = TRUE)
   hlah_row <- result[result$hgnc_symbol == "HLA-H", ]
   testthat::expect_equal(nrow(hlah_row), 1L)
   testthat::expect_equal(hlah_row$ensembl_gene_id, "ENSG00000310469")
 })
 
 # ---------------------------------------------------------------------------
-# dedup_gene_ids(): verbose output
+# .dedup_gene_ids(): verbose output
 # ---------------------------------------------------------------------------
-testthat::test_that("dedup_gene_ids verbose = TRUE emits first pass message", {
+testthat::test_that(".dedup_gene_ids verbose = TRUE emits first pass message", {
   testthat::expect_message(
-    convertid:::dedup_gene_ids(fixture_genes_bm,
-                               has_symbols = TRUE,
-                               has_ensg2   = TRUE,
-                               verbose     = TRUE),
+    convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                has_symbols = TRUE,
+                                has_ensg2   = TRUE,
+                                verbose     = TRUE),
     regexp = "First pass"
   )
 })
 
-testthat::test_that("dedup_gene_ids verbose = TRUE emits second pass message", {
+testthat::test_that(".dedup_gene_ids verbose = TRUE emits second pass message", {
   testthat::expect_message(
-    convertid:::dedup_gene_ids(fixture_genes_bm,
-                               has_symbols = TRUE,
-                               has_ensg2   = TRUE,
-                               verbose     = TRUE),
+    convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                has_symbols = TRUE,
+                                has_ensg2   = TRUE,
+                                verbose     = TRUE),
     regexp = "Second pass"
   )
 })
 
-testthat::test_that("dedup_gene_ids verbose = FALSE produces no messages", {
+testthat::test_that(".dedup_gene_ids verbose = FALSE produces no messages", {
   testthat::expect_no_message(
-    convertid:::dedup_gene_ids(fixture_genes_bm,
-                               has_symbols = TRUE,
-                               has_ensg2   = TRUE,
-                               verbose     = FALSE)
+    convertid:::.dedup_gene_ids(fixture_genes_bm,
+                                has_symbols = TRUE,
+                                has_ensg2   = TRUE,
+                                verbose     = FALSE)
   )
 })
 
 # ---------------------------------------------------------------------------
-# dedup_gene_ids(): ENSG-only mode
+# .dedup_gene_ids(): ENSG-only mode
 # ---------------------------------------------------------------------------
-testthat::test_that("dedup_gene_ids works in ENSG-only mode (no gene_name column)", {
+testthat::test_that(".dedup_gene_ids works in ENSG-only mode (no gene_name column)", {
   ensg_only <- fixture_genes_bm[, c("ensembl_gene_id", "hgnc_symbol",
                                      "hgnc_symbol_2", "ensg_2")]
-  result <- convertid:::dedup_gene_ids(ensg_only,
-                                       has_symbols = FALSE,
-                                       has_ensg2   = FALSE)
+  result <- convertid:::.dedup_gene_ids(ensg_only,
+                                        has_symbols = FALSE,
+                                        has_ensg2   = FALSE)
   testthat::expect_s3_class(result, "data.frame")
   testthat::expect_false(any(duplicated(result$hgnc_symbol)))
 })
@@ -189,7 +189,7 @@ testthat::test_that("unify_gene_ids errors on empty input", {
 testthat::test_that("original column names are restored in output", {
   # Mirror the graceful-degradation return of try_biomart(): the hgnc_symbol
   # column is always present, filled with NA when every host failed.
-  mockery::stub(unify_gene_ids, "try_biomart", function(genes, ...) {
+  mockery::stub(unify_gene_ids, ".try_biomart", function(genes, ...) {
     genes$hgnc_symbol <- NA_character_
     genes
   })
@@ -254,7 +254,7 @@ testthat::test_that("unify_gene_ids produces correct output with mocked BioMart"
   testthat::skip_if_not_installed("org.Hs.eg.db")
 
   # Stub try_biomart to return the fixture directly (simulates successful BioMart)
-  mockery::stub(unify_gene_ids, "try_biomart", function(genes, ...) {
+  mockery::stub(unify_gene_ids, ".try_biomart", function(genes, ...) {
     # Return fixture data merged onto the input genes
     merge(genes, fixture_genes_bm[, c("ensembl_gene_id", "hgnc_symbol")],
           by = "ensembl_gene_id", all.x = TRUE)
