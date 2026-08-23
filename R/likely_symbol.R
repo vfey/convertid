@@ -9,6 +9,36 @@
 .likely_symbol_cache <- new.env(hash = FALSE, parent = emptyenv())
 
 
+#' Unexported functions
+#' Tokenise a '|'-separated HGNC field
+#' @description \command{.split_hgnc()} splits one \code{alias_symbol} or
+#' \code{prev_symbol} field of the HGNC table into its individual symbols. It
+#' is the single definition of how such a field is tokenised, used both when
+#' the inverted indices are built and wherever the tokens are turned into a
+#' result data frame, which is what stops the index path and the row-scan path
+#' of \command{likely_symbol()} from drifting apart.
+#'
+#' Tokens are trimmed and empty or \code{NA} tokens are dropped:
+#' \command{read.delim()} uses \code{na.strings = "NA"}, so a field holding the
+#' literal string \emph{NA} arrives as \code{NA_character_}, which would
+#' otherwise reach \command{exists()} and abort with \emph{invalid first
+#' argument}.
+#' @param x (\code{character}) of length one. The field to tokenise.
+#' @param empty What to return when no token is left. Index building wants the
+#' default \code{character(0)}, so that an empty field contributes no keys.
+#' Callers that build a one-row \code{data.frame} from the result pass
+#' \code{""} instead, since \command{data.frame()} cannot recycle a
+#' zero-length column against a length-one one.
+#' @return A \code{character} vector of symbols, or \code{empty}.
+#' @seealso \code{\link{likely_symbol}}
+#' @keywords internal
+.split_hgnc <- function(x, empty = character(0)) {
+  toks <- trimws(strsplit(as.character(x), "|", fixed = TRUE)[[1]])
+  toks <- toks[!is.na(toks) & nzchar(toks)]
+  if (length(toks)) toks else empty
+}
+
+
 #' Retrieve Symbol Aliases and Previous symbols to determine a likely current symbol
 #' @description \command{likely_symbol()} downloads the latest version of the HGNC gene symbol database as a text
 #'     file and query it to obtain symbol aliases, previous symbols and all symbols currently in use. (Optionally)
@@ -170,8 +200,7 @@ likely_symbol <-
           if (verbose) message("   > Building alias symbol index...", domain = NA)
           alias_index <- new.env(hash = TRUE, parent = emptyenv())
           for (i in seq_len(nrow(hg))) {
-            tokens <- trimws(strsplit(hg$alias_symbol[i], "\\|")[[1]])
-            tokens <- tokens[nchar(tokens) > 0L]
+            tokens <- .split_hgnc(hg$alias_symbol[i])
             for (tok in tokens) {
               if (exists(tok, envir = alias_index, inherits = FALSE))
                 alias_index[[tok]] <- c(alias_index[[tok]], i)
@@ -184,8 +213,7 @@ likely_symbol <-
           if (verbose) message("   > Building previous symbol index...", domain = NA)
           prev_index <- new.env(hash = TRUE, parent = emptyenv())
           for (i in seq_len(nrow(hg))) {
-            tokens <- trimws(strsplit(hg$prev_symbol[i], "\\|")[[1]])
-            tokens <- tokens[nchar(tokens) > 0L]
+            tokens <- .split_hgnc(hg$prev_symbol[i])
             for (tok in tokens) {
               if (exists(tok, envir = prev_index, inherits = FALSE))
                 prev_index[[tok]] <- c(prev_index[[tok]], i)
@@ -233,10 +261,17 @@ likely_symbol <-
                   NULL
               })))
               if (length(alias_rows)) {
+                # One row per alias of the matched gene, exactly as the
+                # row-scan path below produces. Keeping only the first alias
+                # here would hide the queried alias from the re-match further
+                # down whenever it is not the first one listed, so the same
+                # query would resolve differently above and below
+                # 'index_threshold'.
                 hga1 <- do.call("rbind", lapply(alias_rows, function(z) {
+                  alias_toks <- .split_hgnc(hg$alias_symbol[z], empty = "")
                   data.frame(
                     symbol       = hg$symbol[z],
-                    alias_symbol = trimws(strsplit(hg$alias_symbol[z], "\\|")[[1]])[1L],
+                    alias_symbol = alias_toks,
                     stringsAsFactors = FALSE
                   )
                 }))
@@ -245,11 +280,11 @@ likely_symbol <-
               }
             } else {
               hga1 <- plyr::llply(seq_len(nrow(hg)), function(z) {
-                hgz <- grep(as2, strsplit(hg$alias_symbol[z], "\\|")[[1]])
+                alias_toks <- .split_hgnc(hg$alias_symbol[z], empty = "")
+                hgz <- grep(as2, alias_toks)
                 if (length(hgz)) {
-                  hgaz <- hg[z, ]
-                  data.frame(symbol       = hgaz[[1]],
-                             alias_symbol = strsplit(hgaz[[2]], "\\|")[[1]],
+                  data.frame(symbol       = hg$symbol[z],
+                             alias_symbol = alias_toks,
                              stringsAsFactors = FALSE)
                 } else {
                   NULL
@@ -296,8 +331,7 @@ likely_symbol <-
               })))
               if (length(prev_rows)) {
                 hga3 <- do.call("rbind", lapply(prev_rows, function(i) {
-                  prev_toks <- trimws(strsplit(hg$prev_symbol[i], "\\|")[[1]])
-                  prev_toks <- if (length(prev_toks)) prev_toks else ""
+                  prev_toks <- .split_hgnc(hg$prev_symbol[i], empty = "")
                   data.frame(symbol      = hg$symbol[i],
                              prev_symbol = prev_toks,
                              stringsAsFactors = FALSE)
@@ -309,13 +343,11 @@ likely_symbol <-
               }
             } else {
               hga3 <- plyr::llply(seq_len(nrow(hg)), function(i) {
-                hgi <- grep(as2, strsplit(hg$prev_symbol[i], "\\|")[[1]])
+                prev_toks <- .split_hgnc(hg$prev_symbol[i], empty = "")
+                hgi <- grep(as2, prev_toks)
                 if (length(hgi)) {
-                  hgai      <- hg[i, ]
-                  hgai_prev <- strsplit(hgai[[3]], "\\|")[[1]]
-                  if (!length(hgai_prev)) hgai_prev <- ""
-                  data.frame(symbol      = hgai[[1]],
-                             prev_symbol = hgai_prev,
+                  data.frame(symbol      = hg$symbol[i],
+                             prev_symbol = prev_toks,
                              stringsAsFactors = FALSE)
                 } else {
                   NULL
