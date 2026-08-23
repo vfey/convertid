@@ -264,6 +264,52 @@ testthat::test_that("both paths agree in the presence of NA fields", {
   testthat::expect_equal(r_scan, r_index)
 })
 
+# ---------------------------------------------------------------------------
+# Query padding, and all_symbols regression guards
+#
+# The query itself used to go into the match pattern untrimmed, so " CCBL1 "
+# built "^ CCBL1 $" and resolved to nothing. The all_symbols assertions pin the
+# values that the removal of the redundant second split must not disturb.
+# ---------------------------------------------------------------------------
+testthat::test_that("a query padded with whitespace still resolves", {
+  result <- likely_symbol(" CCBL1 ", hgnc = hgnc_fixture,
+                          index_threshold = 99L, output = "likely", verbose = FALSE)
+  testthat::expect_equal(result$likely_symbol, "KYAT1")
+})
+
+testthat::test_that("both paths agree on a padded query", {
+  r_scan  <- likely_symbol(" CCBL1 ", hgnc = hgnc_fixture,
+                            index_threshold = 99L, output = "likely", verbose = FALSE)
+  r_index <- likely_symbol(" CCBL1 ", hgnc = hgnc_fixture,
+                            index_threshold = 1L,  output = "likely", verbose = FALSE)
+  testthat::expect_equal(r_scan, r_index)
+  testthat::expect_equal(r_index$likely_symbol, "KYAT1")
+})
+
+testthat::test_that("all_symbols is unchanged for an alias query", {
+  result <- likely_symbol("CCBL1", hgnc = hgnc_fixture,
+                          output = "symbols", verbose = FALSE)
+  testthat::expect_equal(result$all_symbols, "CCBL1|KYAT1")
+})
+
+testthat::test_that("all_symbols is unchanged for a current symbol query", {
+  # ACTB has empty alias_symbol and prev_symbol fields, which reach hga2 as NA.
+  result <- likely_symbol("ACTB", hgnc = hgnc_fixture,
+                          output = "symbols", verbose = FALSE)
+  testthat::expect_equal(result$all_symbols, "ACTB")
+})
+
+testthat::test_that("both paths agree on all_symbols", {
+  syms    <- c("CCBL1", "KAAT1", "ACTB", "RNF53")
+  r_scan  <- likely_symbol(syms, hgnc = hgnc_fixture,
+                            index_threshold = 99L, output = "symbols", verbose = FALSE)
+  r_index <- likely_symbol(syms, hgnc = hgnc_fixture,
+                            index_threshold = 1L,  output = "symbols", verbose = FALSE)
+  r_scan  <- r_scan[order(r_scan$input_symbol), ]
+  r_index <- r_index[order(r_index$input_symbol), ]
+  testthat::expect_equal(r_scan, r_index)
+})
+
 testthat::test_that("both paths agree when aliases are padded with whitespace", {
   r_scan  <- likely_symbol("KAT1", hgnc = hgnc_fixture_ws,
                             index_threshold = 99L, output = "likely", verbose = FALSE)
