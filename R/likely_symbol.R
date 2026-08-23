@@ -244,7 +244,11 @@ likely_symbol <-
 
         hgd <- plyr::ldply(seq_along(unique.sp), function(y) {
           as  <- unique.sp[y]
-          as1 <- strsplit(as, "\\|")[[1]]
+          # trimws() so that a padded query still matches: without it a symbol
+          # such as " ACTB" builds the pattern "^ ACTB$", which matches nothing
+          # and silently returns the input unresolved. NA is left as NA rather
+          # than run through .split_hgnc(), which would turn it into "".
+          as1 <- trimws(strsplit(as, "|", fixed = TRUE)[[1]])
           as2 <- paste(paste0("^", as1, "$"), collapse = "|")
 
           # ------------------------------------------------------------------
@@ -374,12 +378,18 @@ likely_symbol <-
           if (is.null(hga2)) {
             hga2_123 <- NULL
           } else {
-            hga2_123 <- unlist(strsplit(unlist(hga2), "\\|"))
+            # The cells of hga2 are HGNC alias_symbol / prev_symbol fields
+            # reached in bulk, so they are tokenised the same way as everywhere
+            # else. Empty fields are held as NA here and .split_hgnc() drops
+            # them, which the sort() below was doing implicitly anyway.
+            hga2_123 <- unlist(lapply(unlist(hga2), .split_hgnc))
           }
 
+          # Every contributor is already tokenised: as1 above, hga2_123 just
+          # now, and hga1 / hga3 one token per row via .split_hgnc(). A further
+          # split would be a no-op.
           hga123 <- unique(c(as1, unlist(hga1), hga2_123, unlist(hga3)))
-          hga123 <- hga123[nchar(hga123) > 0L]
-          hga123 <- unlist(strsplit(hga123, "\\|"))
+          hga123 <- hga123[!is.na(hga123) & nzchar(hga123)]
 
           current_sym <- paste(
             unique(c(hga1$symbol, hga2s, hga3$symbol, as1)),
