@@ -89,13 +89,15 @@
 #' }
 #' \strong{\code{output="all"}}:
 #' \tabular{ll}{
-#' \tab 'orig_input'\cr
-#' \tab 'organism'\cr
 #' \tab 'current_symbols'\cr
 #' \tab 'likely_symbol'\cr
+#' \tab 'previous_symbol'\cr
 #' \tab 'input_symbol'\cr
 #' \tab 'all_symbols'\cr
 #' }
+#' The \code{output} setting only applies to \code{orgnsm = "human"}. Any other
+#' organism returns \code{'orig_input'}, \code{'organism'}, \code{'input_symbol'}
+#' and \code{'all_symbols'} regardless of it.
 #' @note Only fully implemented for Human for now.
 #' @examples
 #' \dontrun{
