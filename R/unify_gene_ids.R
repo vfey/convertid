@@ -1,155 +1,84 @@
-# =============================================================================
-# dedup_gene_ids()
-# Internal deduplication function, not exported.
-# Accepts a data frame that already has hgnc_symbol, hgnc_symbol_2, ensg_2
-# columns populated (i.e. after all lookup steps have completed) and returns
-# a deduplicated data frame with unified hgnc_symbol values.
-#
-# Parameters:
-#   genes       data frame with columns: ensembl_gene_id, hgnc_symbol,
-#               hgnc_symbol_2, ensg_2, and optionally gene_name
-#   has_symbols logical; TRUE if gene_name column is present
-#   has_ensg2   logical; TRUE if ensg_2 contains any non-NA values
-#   verbose     logical
-# =============================================================================
-dedup_gene_ids <- function(genes, has_symbols, has_ensg2, verbose = FALSE) {
+#' Unexported functions
+#' Deduplicate reconciled gene ID rows
+#' @description \command{.dedup_gene_ids()} takes a data frame in which the
+#' BioMart and AnnotationDbi lookups have already been carried out, i.e. one
+#' that carries populated \code{hgnc_symbol}, \code{hgnc_symbol_2} and
+#' \code{ensg_2} columns, and reduces it to one row per gene with a unified
+#' \code{hgnc_symbol}.
+#'
+#' Two passes are run. The first groups by \code{gene_name} (or by
+#' \code{ensembl_gene_id} in ENSG-only mode) and resolves several Ensembl IDs
+#' mapping to one gene; the second groups by \code{hgnc_symbol} and resolves
+#' several gene names mapping to one symbol, always down to a single row. Each
+#' pass runs a chain of filters via \command{.apply_filters()}; which chain is
+#' used depends on whether gene symbols and AnnotationDbi Ensembl IDs are
+#' available.
+#' @param genes (\code{data.frame}). Columns \code{ensembl_gene_id},
+#' \code{hgnc_symbol}, \code{hgnc_symbol_2}, \code{ensg_2}, and optionally
+#' \code{gene_name}.
+#' @param has_symbols (\code{logical}). Is a \code{gene_name} column present?
+#' @param has_ensg2 (\code{logical}). Does \code{ensg_2} hold any non-\code{NA}
+#' value?
+#' @param verbose (\code{logical}). Should progress and summary messages be
+#' written to the console? Defaults to \code{FALSE}.
+#' @return A \code{data.frame} with one row per gene and unified
+#' \code{hgnc_symbol} values.
+#' @seealso \code{\link{unify_gene_ids}}, \code{\link{.apply_filters}}
+#' @keywords internal
+.dedup_gene_ids <- function(genes, has_symbols, has_ensg2, verbose = FALSE) {
 
   # ---------------------------------------------------------------------------
-  # Helper: apply a sequence of filters, returning as soon as one resolves
-  # to exactly 1 row. If force_single = TRUE, falls back to x[1, ] when
-  # nothing resolves. If force_single = FALSE, returns full group unchanged.
-  # ---------------------------------------------------------------------------
-  apply_filters <- function(x, filters, force_single = FALSE) {
-    for (f in filters) {
-      candidate <- f(x)
-      if (nrow(candidate) == 1L) return(candidate)
-    }
-    if (force_single) x[1L, ] else x
-  }
-
-  # ---------------------------------------------------------------------------
-  # Filter definitions
-  # ---------------------------------------------------------------------------
-
-  # Helper: check whether ensembl_gene_id appears in a ///-separated ensg_2
-  ensg_in_list <- function(ensg_id, ensg_2) {
-    !is.na(ensg_2) & mapply(function(id, e2) {
-      id %in% trimws(strsplit(e2, "///")[[1L]])
-    }, ensg_id, ensg_2)
-  }
-
-  # Pre-filter (step 0): if any row has hgnc_symbol_2 == gene_name (AnnotationDbi
-  # confirmed), discard rows with NA hgnc_symbol_2. This prevents an unconfirmed
-  # BioMart row from being chosen over a confirmed one simply because it has
-  # hgnc_symbol == gene_name.
-  filter_prefer_confirmed <- function(x) {
-    # Case 1: confirmed sibling has hgnc_symbol_2 == gene_name
-    if (any(!is.na(x$hgnc_symbol_2) &
-            x$hgnc_symbol_2 == x$gene_name &
-            !grepl("^ENSG", x$hgnc_symbol_2)))
-      return(x[!is.na(x$hgnc_symbol_2), ])
-    # Case 2: confirmed sibling belongs to a different symbol entirely
-    # (e.g. ENSG00000202198 has hgnc_symbol_2 == RN7SK, not 7SK)
-    # Discard unconfirmed NA siblings, keeping only the confirmed row(s)
-    if (any(!is.na(x$hgnc_symbol_2) &
-            !grepl("^ENSG", x$hgnc_symbol_2) &
-            x$hgnc_symbol_2 != x$gene_name))
-      return(x[!is.na(x$hgnc_symbol_2), ])
-    x
-  }
-
-  # Filters requiring gene_name
-  filter_symbol_matches_name <- function(x)
-    x[!is.na(x$hgnc_symbol) &
-        x$hgnc_symbol == x$gene_name &
-        !grepl("^ENSG", x$hgnc_symbol), ]
-
-  filter_symbol2_matches_name <- function(x)
-    x[!is.na(x$hgnc_symbol_2) &
-        x$hgnc_symbol_2 == x$gene_name &
-        !grepl("^ENSG", x$hgnc_symbol_2), ]
-
-  filter_symbol_matches_gene_name <- function(x)
-    x[x$hgnc_symbol == x$gene_name, ]
-
-  # Filters requiring ensg_2
-  filter_ensg2_first <- function(x) {
-    first_ensg <- trimws(sapply(strsplit(as.character(x$ensg_2), "///"), `[`, 1L))
-    x[!is.na(x$ensg_2) & x$ensembl_gene_id == first_ensg, ]
-  }
-
-  filter_ensg_not_in_list <- function(x)
-    x[!ensg_in_list(x$ensembl_gene_id, x$ensg_2), ]
-
-  # Filters that work without symbols or ensg_2
-  filter_symbols_agree <- function(x)
-    x[!is.na(x$hgnc_symbol_2) & x$hgnc_symbol == x$hgnc_symbol_2, ]
-
-  filter_drop_ensg_symbol <- function(x)
-    x[!grepl("^ENSG", x$hgnc_symbol), ]
-
-  filter_has_symbol2 <- function(x)
-    x[!is.na(x$hgnc_symbol_2), ]
-
-  filter_has_ensg2 <- function(x)
-    x[!is.na(x$ensg_2), ]
-
-  # Last resort: only fires when all disambiguation fields are NA
-  filter_last_resort <- function(x) {
-    if (all(is.na(x$ensg_2)) && all(is.na(x$hgnc_symbol_2))) x[1L, ] else x
-  }
-
-  # ---------------------------------------------------------------------------
-  # Build filter chains based on available data
+  # Build filter chains based on available data. The order of each chain is the
+  # reconciliation priority; see the individual filters in dedup_filters.R.
   # ---------------------------------------------------------------------------
   if (has_symbols && has_ensg2) {
     # Full filter chain: gene symbols + ensg_2 available
     dedup_filters_by_name <- list(
-      filter_prefer_confirmed,          # 0.  Discard NA hgnc_symbol_2 when confirmed alternative exists
-      filter_symbol_matches_name,       # 1.  BioMart hgnc matches gene_name
-      filter_symbol2_matches_name,      # 2.  AnnotationDbi hgnc matches gene_name
-      filter_symbols_agree,             # 3.  Both sources agree on symbol
-      filter_ensg2_first,               # 4.  ENSG confirmed by first entry in ensg_2
-      filter_drop_ensg_symbol,          # 5.  Drop raw ENSG placeholders
-      filter_last_resort                # 6.  All NA: take first row
+      .filter_prefer_confirmed,          # 0.  Discard NA hgnc_symbol_2 when confirmed alternative exists
+      .filter_symbol_matches_name,       # 1.  BioMart hgnc matches gene_name
+      .filter_symbol2_matches_name,      # 2.  AnnotationDbi hgnc matches gene_name
+      .filter_symbols_agree,             # 3.  Both sources agree on symbol
+      .filter_ensg2_first,               # 4.  ENSG confirmed by first entry in ensg_2
+      .filter_drop_ensg_symbol,          # 5.  Drop raw ENSG placeholders
+      .filter_last_resort                # 6.  All NA: take first row
     )
     dedup_filters_by_symbol <- list(
-      filter_symbols_agree,             # 1. Both sources agree
-      filter_symbol_matches_gene_name,  # 2. hgnc_symbol matches gene_name
-      filter_ensg2_first,               # 3. ENSG confirmed by first entry in ensg_2
-      filter_ensg_not_in_list,          # 4. Prefer more canonical ENSG
-      filter_has_symbol2,               # 5. Has AnnotationDbi symbol
-      filter_has_ensg2                  # 6. Has AnnotationDbi ENSG
+      .filter_symbols_agree,             # 1. Both sources agree
+      .filter_symbol_matches_gene_name,  # 2. hgnc_symbol matches gene_name
+      .filter_ensg2_first,               # 3. ENSG confirmed by first entry in ensg_2
+      .filter_ensg_not_in_list,          # 4. Prefer more canonical ENSG
+      .filter_has_symbol2,               # 5. Has AnnotationDbi symbol
+      .filter_has_ensg2                  # 6. Has AnnotationDbi ENSG
     )
   } else if (has_symbols) {
     # Gene symbols available but ensg_2 lookup failed or unavailable
     dedup_filters_by_name <- list(
-      filter_prefer_confirmed,          # 0.  Discard NA hgnc_symbol_2 when confirmed alternative exists
-      filter_symbol_matches_name,       # 1.  BioMart hgnc matches gene_name
-      filter_symbol2_matches_name,      # 2.  AnnotationDbi hgnc matches gene_name
-      filter_symbols_agree,             # 3.  Both sources agree on symbol
-      filter_drop_ensg_symbol,          # 4.  Drop raw ENSG placeholders
-      filter_last_resort                # 5.  All NA: take first row
+      .filter_prefer_confirmed,          # 0.  Discard NA hgnc_symbol_2 when confirmed alternative exists
+      .filter_symbol_matches_name,       # 1.  BioMart hgnc matches gene_name
+      .filter_symbol2_matches_name,      # 2.  AnnotationDbi hgnc matches gene_name
+      .filter_symbols_agree,             # 3.  Both sources agree on symbol
+      .filter_drop_ensg_symbol,          # 4.  Drop raw ENSG placeholders
+      .filter_last_resort                # 5.  All NA: take first row
     )
     dedup_filters_by_symbol <- list(
-      filter_symbols_agree,             # 1. Both sources agree
-      filter_symbol_matches_gene_name,  # 2. hgnc_symbol matches gene_name
-      filter_has_symbol2,               # 3. Has AnnotationDbi symbol
-      filter_has_ensg2                  # 4. Has AnnotationDbi ENSG
+      .filter_symbols_agree,             # 1. Both sources agree
+      .filter_symbol_matches_gene_name,  # 2. hgnc_symbol matches gene_name
+      .filter_has_symbol2,               # 3. Has AnnotationDbi symbol
+      .filter_has_ensg2                  # 4. Has AnnotationDbi ENSG
     )
   } else {
     # ENSG-only: no gene symbols, no ensg_2
     dedup_filters_by_name <- list(
-      filter_symbols_agree,             # 1. Both sources agree
-      filter_drop_ensg_symbol,          # 2. Drop raw ENSG placeholders
-      filter_has_symbol2,               # 3. Has AnnotationDbi symbol
-      filter_last_resort                # 4. All NA: take first row
+      .filter_symbols_agree,             # 1. Both sources agree
+      .filter_drop_ensg_symbol,          # 2. Drop raw ENSG placeholders
+      .filter_has_symbol2,               # 3. Has AnnotationDbi symbol
+      .filter_last_resort                # 4. All NA: take first row
     )
     dedup_filters_by_symbol <- list(
-      filter_symbols_agree,             # 1. Both sources agree
-      filter_ensg_not_in_list,          # 2. Prefer more canonical ENSG
-      filter_has_symbol2,               # 3. Has AnnotationDbi symbol
-      filter_has_ensg2                  # 4. Has AnnotationDbi ENSG
+      .filter_symbols_agree,             # 1. Both sources agree
+      .filter_ensg_not_in_list,          # 2. Prefer more canonical ENSG
+      .filter_has_symbol2,               # 3. Has AnnotationDbi symbol
+      .filter_has_ensg2                  # 4. Has AnnotationDbi ENSG
     )
   }
 
@@ -171,7 +100,7 @@ dedup_gene_ids <- function(genes, has_symbols, has_ensg2, verbose = FALSE) {
         }
         x <- x[!duplicated(x$ensembl_gene_id), ]
       }
-      x <- apply_filters(x, dedup_filters_by_name, force_single = FALSE)
+      x <- .apply_filters(x, dedup_filters_by_name, force_single = FALSE)
     }
 
     # Fix hgnc_symbol if it is a raw ENSG placeholder. When gene_name is
@@ -215,7 +144,7 @@ dedup_gene_ids <- function(genes, has_symbols, has_ensg2, verbose = FALSE) {
 
   genes2 <- plyr::ddply(genes2_intermediate, "hgnc_symbol", function(x) {
     if (nrow(x) == 1L) return(x)
-    apply_filters(x, dedup_filters_by_symbol, force_single = TRUE)
+    .apply_filters(x, dedup_filters_by_symbol, force_single = TRUE)
   })
 
   if (verbose) {
@@ -267,7 +196,7 @@ dedup_gene_ids <- function(genes, has_symbols, has_ensg2, verbose = FALSE) {
 #' \strong{Deduplication passes}
 #'
 #' The function performs two sequential deduplication passes via the internal
-#' \code{dedup_gene_ids()} function:
+#' \code{.dedup_gene_ids()} function:
 #' \enumerate{
 #'   \item Deduplicate by \code{gene_name} (if available) or \code{ensembl_gene_id},
 #'     resolving multiple ENSG IDs mapping to the same gene name.
@@ -424,7 +353,7 @@ unify_gene_ids <- function(genes,
   # Lookups
   # ---------------------------------------------------------------------------
   if (verbose) message("Querying BioMart...")
-  genes <- try_biomart(genes, host, biomart_fallback, verbose)
+  genes <- .try_biomart(genes, host, biomart_fallback, verbose)
   biomart_ok <- !all(is.na(genes$hgnc_symbol))
   if (verbose) {
     if (biomart_ok)
@@ -495,10 +424,10 @@ unify_gene_ids <- function(genes,
   # ---------------------------------------------------------------------------
   # Deduplicate via internal function
   # ---------------------------------------------------------------------------
-  genes2 <- dedup_gene_ids(genes,
-                           has_symbols = has_symbols,
-                           has_ensg2   = has_ensg2,
-                           verbose     = verbose)
+  genes2 <- .dedup_gene_ids(genes,
+                            has_symbols = has_symbols,
+                            has_ensg2   = has_ensg2,
+                            verbose     = verbose)
 
   # Drop intermediate lookup columns unless explicitly requested
   if (!keep_intermediates) {
