@@ -39,8 +39,11 @@ Default: \code{FALSE}.}
 }
 \value{
 A deduplicated data frame with unified HGNC symbols in the
-  \code{hgnc_symbol} column, plus \code{hgnc_symbol_2} and \code{ensg_2}
-  columns from the AnnotationDbi lookups.
+  \code{hgnc_symbol} column. The Ensembl ID and gene symbol columns are
+  returned under the names they were given in, i.e. those passed as
+  \code{ensg_col} and \code{symbol_col}. The intermediate lookup columns
+  \code{hgnc_symbol_2} and \code{ensg_2} are dropped unless
+  \code{keep_intermediates = TRUE}.
 }
 \description{
 Takes a data frame with Ensembl gene IDs (and optionally gene symbols) and

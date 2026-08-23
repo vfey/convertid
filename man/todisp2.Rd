@@ -15,6 +15,9 @@ todisp2(
   biom.attributes = c("ensembl_gene_id", "hgnc_symbol"),
   biom.cache = rappdirs::user_cache_dir("biomaRt"),
   use.cache = TRUE,
+  biomart.fallback = c("https://useast.ensembl.org", "https://uswest.ensembl.org",
+    "https://asia.ensembl.org"),
+  chunk.size = 500L,
   keep.original = TRUE,
   verbose = FALSE
 )
@@ -40,6 +43,13 @@ todisp2(
 
 \item{use.cache}{(\code{logical}). Should \command{getBM()} use the cache? Defaults to \code{TRUE} as in the \command{getBM()} function and is passed on to that.}
 
+\item{biomart.fallback}{\code{character} vector. Fallback host URLs to try if the primary
+\code{host} fails. Set to \code{NULL} to disable fallback. Defaults to Ensembl mirror sites.}
+
+\item{chunk.size}{\code{integer} of length one. Maximum number of IDs per BioMart query.
+Large ID lists are split into chunks of this size to avoid server timeouts.
+Set to \code{Inf} to disable chunking. Defaults to \code{500}.}
+
 \item{keep.original}{(\code{logical}). Should the order and length of the input vector be preserved, i.e., should also IDs missing after conversion be kept? Defaults to \code{TRUE}.}
 
 \item{verbose}{(\code{logical}). Should verbose output be written to the console? Defaults to \code{FALSE}.}
@@ -53,6 +63,12 @@ A character vector of Gene Symbols.
     e.g., for visualisation, which is why the input ID type is hard-coded to ENSG IDs. If Biomart is not available
     the function can fall back to use \command{convertId2()} or a user-provided data frame with corresponding ENSG IDs and
     Symbols.
+}
+\details{
+If \code{biomart = TRUE} but every BioMart host fails, a warning is emitted
+  and the function degrades to the same route it would have taken with
+  \code{biomart = FALSE}: the data frame in \code{lab} if one was supplied, otherwise
+  \command{convertId2()}.
 }
 \examples{
 \dontrun{

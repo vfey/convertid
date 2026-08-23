@@ -25,7 +25,7 @@ convert.bm(
 \arguments{
 \item{dat}{\code{matrix} or \code{data.frame}. Matrix or data frame with the ids to be converted in a column or as row names.}
 
-\item{id}{\code{character}. Name of the column with the ids to be converted, special name "rownames" will use the row names.}
+\item{id}{\code{character}. Name of the column with the ids to be converted; the special names "row.names" and "rownames" both select the row names.}
 
 \item{biom.data.set}{\code{character} of length one. Biomart data set to use.}
 
