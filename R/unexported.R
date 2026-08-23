@@ -145,7 +145,7 @@
 #' @param verbose Logical; emit progress messages.
 #' @return Data frame with BioMart annotations, or input with NA symbols on failure.
 #' @keywords internal
-try_biomart <- function(genes, host, fallback_hosts, verbose) {
+.try_biomart <- function(genes, host, fallback_hosts, verbose) {
   tryCatch(
     convert.bm(genes, id = "ensembl_gene_id", host = host,
                biomart.fallback = fallback_hosts, verbose = verbose),
