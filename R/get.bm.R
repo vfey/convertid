@@ -94,14 +94,19 @@ get.bm <-
     # -------------------------------------------------------------------------
     if (any(biom.data.set %in% c("human", "mouse"))) {
       biom.data.set <- match.arg(biom.data.set)
+    } else {
+      # A data set named by the user. Reduce to length one here: a multi-element
+      # value would otherwise reach an if() condition below and abort on
+      # R >= 4.2 with "the condition has length > 1".
+      biom.data.set <- as.character(biom.data.set)[1L]
     }
-    if (biom.data.set == "human") {
-      biom.data.set <- "hsapiens_gene_ensembl"
-      if (verbose) message("Setting data set to ", sQuote(biom.data.set), "...")
-    } else if (biom.data.set == "mouse") {
-      biom.data.set <- "mmusculus_gene_ensembl"
-      if (verbose) message("Setting data set to ", sQuote(biom.data.set), "...")
-    }
+    biom.data.set.in <- biom.data.set
+    biom.data.set <- switch(biom.data.set,
+                            human = "hsapiens_gene_ensembl",
+                            mouse = "mmusculus_gene_ensembl",
+                            biom.data.set)
+    if (verbose && !identical(biom.data.set, biom.data.set.in))
+      message("Setting data set to ", sQuote(biom.data.set), "...")
 
     if (verbose) message("Input ID type is ", sQuote(biom.filter))
 
