@@ -99,7 +99,7 @@ Only fully implemented for Human for now.
 # Single symbol lookup (uses row-scan, no index overhead)
 likely_symbol("CCBL1")
 
-# Second call reuses cached HGNC table — no download
+# Second call reuses cached HGNC table (no download)
 likely_symbol("KAAT1")
 
 # Force a fresh download within the same session
