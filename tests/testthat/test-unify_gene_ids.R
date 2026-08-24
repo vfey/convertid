@@ -225,8 +225,9 @@ testthat::test_that("gene_name is used as the symbol when all lookups produce NA
     gene_name       = c("ACTB", "GAPDH"),
     stringsAsFactors = FALSE
   )
-  result <- testthat::expect_warning(
-    unify_gene_ids(input, symbol_col = "gene_name"),
+  # Assign inside expect_warning(): it returns the condition, not the value.
+  testthat::expect_warning(
+    result <- unify_gene_ids(input, symbol_col = "gene_name"),
     "Both BioMart and AnnotationDbi lookups failed"
   )
   testthat::expect_equal(result$hgnc_symbol, c("ACTB", "GAPDH"))
@@ -245,8 +246,9 @@ testthat::test_that("ENSG gene_name falls back to ensembl_gene_id when all looku
     gene_name       = "ENSG00000075624",   # no proper symbol available
     stringsAsFactors = FALSE
   )
-  result <- testthat::expect_warning(
-    unify_gene_ids(input, symbol_col = "gene_name"),
+  # Assign inside expect_warning(): it returns the condition, not the value.
+  testthat::expect_warning(
+    result <- unify_gene_ids(input, symbol_col = "gene_name"),
     "Both BioMart and AnnotationDbi lookups failed"
   )
   testthat::expect_equal(result$hgnc_symbol, "ENSG00000075624")
