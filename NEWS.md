@@ -2,31 +2,21 @@
 
 ## New features
 
-* `convertId2()` gained an `output` argument and can now convert to Entrez Gene
-  IDs in addition to Gene Symbols and Ensembl Gene IDs. `output = "auto"` keeps
-  the previous behaviour; `"symbol"`, `"ensembl"` and `"entrez"` force the
-  return type regardless of the input type. Entrez output is useful for
-  offline, network-independent retrieval, e.g. for KEGG pathway enrichment.
-
-* `get.bm()` and `convert.bm()` gained a `biomart.fallback` argument. When the
-  primary `host` fails, the Ensembl mirror sites are tried in turn. Set it to
-  `NULL` to disable fallback.
-
-* `get.bm()` and `convert.bm()` gained a `chunk.size` argument. Large ID lists
-  are split into chunks to avoid server timeouts. Set it to `Inf` to disable
-  chunking.
+* the `output` argument of `convertId2()` gained the choice `"entrez"`, now
+  fully supporting conversion to Entrez Gene IDs in addition to Gene Symbols and
+  Ensembl Gene IDs. `output = "auto"` keeps the previous behaviour: Ensembl
+  input returns symbols, symbol input returns Ensembl IDs, Entrez input returns
+  symbols.; `"symbol"`, `"ensembl"` and `"entrez"` force the return type
+  regardless of the input type. Entrez output is useful for offline,
+  network-independent retrieval, e.g. for KEGG pathway enrichment.  
 
 * `todisp2()` gained `biomart.fallback` and `chunk.size` as well, and now
   degrades gracefully: if every BioMart host fails it falls back to the data
-  frame in `lab`, or to `convertId2()`, instead of aborting.
+  frame in `lab`, or to `convertId2()`, instead of aborting.  
 
 * `get.bm()` now detects versioned Ensembl gene IDs (e.g. `ENSG00000111199.5`)
   in the input and stops with an informative message, since BioMart's
-  `ensembl_gene_id` filter expects unversioned IDs.
-
-* `likely_symbol()` caches the HGNC table for the duration of the R session and
-  gained a `refresh` argument to force a fresh download. An `index_threshold`
-  argument controls when inverted indices are built for batch lookups.
+  `ensembl_gene_id` filter expects unversioned IDs.  
 
 ## Bug fixes
 
