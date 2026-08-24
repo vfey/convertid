@@ -422,7 +422,11 @@ likely_symbol <-
           } else if (length(psbl_alt) == 1L) {
             likely_sym <- psbl_alt
           } else {
-            likely_sym <- as1
+            # Collapse back to one value: as1 holds several tokens when the
+            # query itself contained "|", and a length > 1 likely_sym would
+            # recycle the surrounding data.frame to several rows, leaving hgd
+            # longer than x2 and breaking the assignments below it.
+            likely_sym <- paste(as1, collapse = "|")
           }
 
           data.frame(
