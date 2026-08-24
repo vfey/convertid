@@ -255,6 +255,69 @@ testthat::test_that("ENSG gene_name falls back to ensembl_gene_id when all looku
 })
 
 # ---------------------------------------------------------------------------
+# NA safety of the individual filters
+#
+# An NA in a logical row index does not drop the row, it fabricates one filled
+# with NA. Such a phantom row satisfies the "exactly one row" test in
+# .apply_filters() and would then win its group.
+# ---------------------------------------------------------------------------
+testthat::test_that(".filter_symbol_matches_gene_name does not fabricate an NA row", {
+  x <- data.frame(
+    ensembl_gene_id = c("ENSG00000000001", "ENSG00000000002"),
+    hgnc_symbol     = c("AAA", "BBB"),
+    gene_name       = c(NA_character_, "CCC"),
+    stringsAsFactors = FALSE
+  )
+  testthat::expect_equal(nrow(convertid:::.filter_symbol_matches_gene_name(x)), 0L)
+})
+
+testthat::test_that(".filter_symbols_agree does not fabricate an NA row", {
+  x <- data.frame(
+    ensembl_gene_id = c("ENSG00000000001", "ENSG00000000002"),
+    hgnc_symbol     = c(NA_character_, "BBB"),
+    hgnc_symbol_2   = c("AAA", "CCC"),
+    stringsAsFactors = FALSE
+  )
+  testthat::expect_equal(nrow(convertid:::.filter_symbols_agree(x)), 0L)
+})
+
+testthat::test_that(".filter_prefer_confirmed does not abort on an NA gene_name", {
+  # any(c(FALSE, NA)) is NA, and if (NA) aborts with "missing value where
+  # TRUE/FALSE needed".
+  x <- data.frame(
+    ensembl_gene_id = c("ENSG00000000001", "ENSG00000000002"),
+    hgnc_symbol_2   = c("AAA", NA_character_),
+    gene_name       = c(NA_character_, "BBB"),
+    stringsAsFactors = FALSE
+  )
+  testthat::expect_no_error(convertid:::.filter_prefer_confirmed(x))
+})
+
+# ---------------------------------------------------------------------------
+# unify_gene_ids(): BioMart down, AnnotationDbi up
+# ---------------------------------------------------------------------------
+testthat::test_that("AnnotationDbi symbols are used when every BioMart host fails", {
+  testthat::skip_if_not_installed("org.Hs.eg.db")
+  # .try_biomart() degrades by setting hgnc_symbol to NA for every row. The
+  # AnnotationDbi result has to take its place, or every symbol stays NA.
+  mockery::stub(unify_gene_ids, ".try_biomart", function(genes, ...) {
+    genes$hgnc_symbol <- NA_character_
+    genes
+  })
+  mockery::stub(unify_gene_ids, "convertId2", function(x) {
+    lookup <- c("ENSG00000075624" = "ACTB", "ENSG00000111640" = "GAPDH")
+    unname(lookup[x])
+  })
+  input <- data.frame(
+    ensembl_gene_id  = c("ENSG00000075624", "ENSG00000111640"),
+    stringsAsFactors = FALSE
+  )
+  result <- unify_gene_ids(input)
+  testthat::expect_false(any(is.na(result$hgnc_symbol)))
+  testthat::expect_equal(sort(result$hgnc_symbol), c("ACTB", "GAPDH"))
+})
+
+# ---------------------------------------------------------------------------
 # Mocked integration test: full pipeline, no network
 # ---------------------------------------------------------------------------
 testthat::test_that("unify_gene_ids produces correct output with mocked BioMart", {

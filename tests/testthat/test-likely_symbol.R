@@ -271,6 +271,15 @@ testthat::test_that("both paths agree in the presence of NA fields", {
 # built "^ CCBL1 $" and resolved to nothing. The all_symbols assertions pin the
 # values that the removal of the redundant second split must not disturb.
 # ---------------------------------------------------------------------------
+testthat::test_that("an unresolvable piped query returns a single row", {
+  # as1 holds two tokens here; a length > 1 likely_sym recycles the result
+  # data.frame to two rows, leaving hgd longer than x2.
+  result <- likely_symbol("FOO|BAR", hgnc = hgnc_fixture,
+                          index_threshold = 99L, output = "likely", verbose = FALSE)
+  testthat::expect_equal(nrow(result), 1L)
+  testthat::expect_equal(result$likely_symbol, "FOO|BAR")
+})
+
 testthat::test_that("a query padded with whitespace still resolves", {
   result <- likely_symbol(" CCBL1 ", hgnc = hgnc_fixture,
                           index_threshold = 99L, output = "likely", verbose = FALSE)
