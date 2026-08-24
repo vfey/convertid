@@ -12,6 +12,21 @@
 # =============================================================================
 
 #' Unexported functions
+#' Turn a row-selection condition into a safe index
+#' @description \command{.keep()} replaces \code{NA} in a logical vector with
+#' \code{FALSE}. Row-indexing a data frame with an \code{NA} does not drop the
+#' row, it fabricates one filled with \code{NA}; such a phantom row can then
+#' satisfy the "exactly one row" test in \command{.apply_filters()} and win its
+#' group. Every filter therefore passes its condition through this function.
+#' @param cond (\code{logical}). A row-selection condition.
+#' @return The same vector with \code{NA} replaced by \code{FALSE}.
+#' @keywords internal
+.keep <- function(cond) {
+  cond[is.na(cond)] <- FALSE
+  cond
+}
+
+#' Unexported functions
 #' Apply a chain of row filters until one resolves to a single row
 #' @description \command{.apply_filters()} calls each filter in \code{filters}
 #' on \code{x} in turn and returns the first result that contains exactly one
@@ -67,14 +82,14 @@
   # Case 1: confirmed sibling has hgnc_symbol_2 == gene_name
   if (any(!is.na(x$hgnc_symbol_2) &
           x$hgnc_symbol_2 == x$gene_name &
-          !grepl("^ENSG", x$hgnc_symbol_2)))
+          !grepl("^ENSG", x$hgnc_symbol_2), na.rm = TRUE))
     return(x[!is.na(x$hgnc_symbol_2), ])
   # Case 2: confirmed sibling belongs to a different symbol entirely
   # (e.g. ENSG00000202198 has hgnc_symbol_2 == RN7SK, not 7SK)
   # Discard unconfirmed NA siblings, keeping only the confirmed row(s)
   if (any(!is.na(x$hgnc_symbol_2) &
           !grepl("^ENSG", x$hgnc_symbol_2) &
-          x$hgnc_symbol_2 != x$gene_name))
+          x$hgnc_symbol_2 != x$gene_name, na.rm = TRUE))
     return(x[!is.na(x$hgnc_symbol_2), ])
   x
 }
@@ -88,9 +103,9 @@
 #' @return A \code{data.frame} with the matching rows.
 #' @keywords internal
 .filter_symbol_matches_name <- function(x)
-  x[!is.na(x$hgnc_symbol) &
-      x$hgnc_symbol == x$gene_name &
-      !grepl("^ENSG", x$hgnc_symbol), ]
+  x[.keep(!is.na(x$hgnc_symbol) &
+            x$hgnc_symbol == x$gene_name &
+            !grepl("^ENSG", x$hgnc_symbol)), ]
 
 #' Unexported functions
 #' Keep rows whose AnnotationDbi symbol matches the gene name
@@ -101,9 +116,9 @@
 #' @return A \code{data.frame} with the matching rows.
 #' @keywords internal
 .filter_symbol2_matches_name <- function(x)
-  x[!is.na(x$hgnc_symbol_2) &
-      x$hgnc_symbol_2 == x$gene_name &
-      !grepl("^ENSG", x$hgnc_symbol_2), ]
+  x[.keep(!is.na(x$hgnc_symbol_2) &
+            x$hgnc_symbol_2 == x$gene_name &
+            !grepl("^ENSG", x$hgnc_symbol_2)), ]
 
 #' Unexported functions
 #' Keep rows whose symbol equals the gene name
@@ -115,7 +130,7 @@
 #' @return A \code{data.frame} with the matching rows.
 #' @keywords internal
 .filter_symbol_matches_gene_name <- function(x)
-  x[x$hgnc_symbol == x$gene_name, ]
+  x[.keep(x$hgnc_symbol == x$gene_name), ]
 
 #' Unexported functions
 #' Keep rows confirmed by the first AnnotationDbi Ensembl ID
@@ -129,7 +144,7 @@
 #' @keywords internal
 .filter_ensg2_first <- function(x) {
   first_ensg <- trimws(sapply(strsplit(as.character(x$ensg_2), "///"), `[`, 1L))
-  x[!is.na(x$ensg_2) & x$ensembl_gene_id == first_ensg, ]
+  x[.keep(!is.na(x$ensg_2) & x$ensembl_gene_id == first_ensg), ]
 }
 
 #' Unexported functions
@@ -142,7 +157,7 @@
 #' @seealso \code{\link{.ensg_in_list}}
 #' @keywords internal
 .filter_ensg_not_in_list <- function(x)
-  x[!.ensg_in_list(x$ensembl_gene_id, x$ensg_2), ]
+  x[.keep(!.ensg_in_list(x$ensembl_gene_id, x$ensg_2)), ]
 
 #' Unexported functions
 #' Keep rows where both annotation sources agree
@@ -154,7 +169,7 @@
 #' @return A \code{data.frame} with the agreeing rows.
 #' @keywords internal
 .filter_symbols_agree <- function(x)
-  x[!is.na(x$hgnc_symbol_2) & x$hgnc_symbol == x$hgnc_symbol_2, ]
+  x[.keep(!is.na(x$hgnc_symbol_2) & x$hgnc_symbol == x$hgnc_symbol_2), ]
 
 #' Unexported functions
 #' Drop rows whose symbol is still a raw Ensembl ID
