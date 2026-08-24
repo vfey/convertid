@@ -9,4 +9,4 @@
 .DS_Store
 .positai
 inst/doc
-cran-comments.md
+cran-comments*.md
