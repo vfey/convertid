@@ -167,19 +167,30 @@
 #' @keywords internal
 .with_biomart_fallback <- function(fn, host, fallback_hosts, verbose) {
   all_hosts <- c(host, fallback_hosts)
+  if (!length(all_hosts))
+    stop("No BioMart host to try: 'host' is empty and no fallback host is set.",
+         call. = FALSE)
   last_error <- NULL
   for (h in all_hosts) {
     if (verbose) message("Trying host: ", sQuote(h), "...")
+    # Success is tracked with a flag rather than by testing the result for
+    # NULL: NULL is a legitimate return value of fn() and must not be taken
+    # for a failed host.
+    ok <- FALSE
     result <- tryCatch(
-      fn(h),
+      {
+        value <- fn(h)
+        ok <- TRUE
+        value
+      },
       error = function(e) {
         if (verbose) message("  Host ", sQuote(h), " failed: ", conditionMessage(e))
         last_error <<- e
         NULL
       }
     )
-    if (!is.null(result)) {
-      if (verbose && h != host)
+    if (ok) {
+      if (verbose && !identical(h, host))
         message("Succeeded with fallback host ", sQuote(h), ".")
       return(result)
     }
