@@ -104,7 +104,7 @@
 #' # Single symbol lookup (uses row-scan, no index overhead)
 #' likely_symbol("CCBL1")
 #'
-#' # Second call reuses cached HGNC table — no download
+#' # Second call reuses cached HGNC table (no download)
 #' likely_symbol("KAAT1")
 #'
 #' # Force a fresh download within the same session
@@ -140,7 +140,7 @@ likely_symbol <-
       # HGNC table: use supplied table, cached table, or download fresh
       # ---------------------------------------------------------------------
       if (!is.null(hgnc)) {
-        # User supplied table explicitly — use as-is, bypass cache entirely
+        # User supplied table explicitly: use as-is, bypass cache entirely
         if (verbose) message("   ::: Using supplied HGNC table.", domain = NA)
 
       } else if (!refresh &&
