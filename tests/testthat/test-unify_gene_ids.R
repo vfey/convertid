@@ -210,41 +210,46 @@ testthat::test_that("original column names are restored in output", {
 # ---------------------------------------------------------------------------
 # unify_gene_ids(): graceful degradation
 # ---------------------------------------------------------------------------
-testthat::test_that("gene_name symbols preserved when all lookups produce NA", {
-  genes_failed <- data.frame(
+testthat::test_that("gene_name is used as the symbol when all lookups produce NA", {
+  testthat::skip_if_not_installed("org.Hs.eg.db")
+  # Drive the real early-exit branch: BioMart degrades to all-NA symbols and
+  # AnnotationDbi resolves nothing, so gene_name has to supply the symbol.
+  mockery::stub(unify_gene_ids, ".try_biomart", function(genes, ...) {
+    genes$hgnc_symbol <- NA_character_
+    genes
+  })
+  mockery::stub(unify_gene_ids, "convertId2",
+    function(x) rep(NA_character_, length(x)))
+  input <- data.frame(
     ensembl_gene_id = c("ENSG00000075624", "ENSG00000111640"),
     gene_name       = c("ACTB", "GAPDH"),
-    hgnc_symbol     = NA_character_,
-    hgnc_symbol_2   = NA_character_,
-    ensg_2          = NA_character_,
     stringsAsFactors = FALSE
   )
-  # Simulate the fix: gene_name is proper symbol so it should be used
-  needs_fix <- is.na(genes_failed$hgnc_symbol) | grepl("^ENSG", genes_failed$hgnc_symbol)
-  genes_failed$hgnc_symbol[needs_fix] <- ifelse(
-    !grepl("^ENSG", genes_failed$gene_name[needs_fix]),
-    genes_failed$gene_name[needs_fix],
-    genes_failed$ensembl_gene_id[needs_fix]
+  result <- testthat::expect_warning(
+    unify_gene_ids(input, symbol_col = "gene_name"),
+    "Both BioMart and AnnotationDbi lookups failed"
   )
-  testthat::expect_equal(genes_failed$hgnc_symbol, c("ACTB", "GAPDH"))
+  testthat::expect_equal(result$hgnc_symbol, c("ACTB", "GAPDH"))
 })
 
 testthat::test_that("ENSG gene_name falls back to ensembl_gene_id when all lookups fail", {
-  genes_failed <- data.frame(
+  testthat::skip_if_not_installed("org.Hs.eg.db")
+  mockery::stub(unify_gene_ids, ".try_biomart", function(genes, ...) {
+    genes$hgnc_symbol <- NA_character_
+    genes
+  })
+  mockery::stub(unify_gene_ids, "convertId2",
+    function(x) rep(NA_character_, length(x)))
+  input <- data.frame(
     ensembl_gene_id = "ENSG00000075624",
-    gene_name       = "ENSG00000075624",  # no proper symbol available
-    hgnc_symbol     = NA_character_,
-    hgnc_symbol_2   = NA_character_,
-    ensg_2          = NA_character_,
+    gene_name       = "ENSG00000075624",   # no proper symbol available
     stringsAsFactors = FALSE
   )
-  needs_fix <- is.na(genes_failed$hgnc_symbol) | grepl("^ENSG", genes_failed$hgnc_symbol)
-  genes_failed$hgnc_symbol[needs_fix] <- ifelse(
-    !grepl("^ENSG", genes_failed$gene_name[needs_fix]),
-    genes_failed$gene_name[needs_fix],
-    genes_failed$ensembl_gene_id[needs_fix]
+  result <- testthat::expect_warning(
+    unify_gene_ids(input, symbol_col = "gene_name"),
+    "Both BioMart and AnnotationDbi lookups failed"
   )
-  testthat::expect_equal(genes_failed$hgnc_symbol, "ENSG00000075624")
+  testthat::expect_equal(result$hgnc_symbol, "ENSG00000075624")
 })
 
 # ---------------------------------------------------------------------------
