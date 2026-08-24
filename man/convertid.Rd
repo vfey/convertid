@@ -26,6 +26,14 @@ License: \tab GPL-3\cr
 LazyLoad: \tab yes\cr
 }
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/vfey/convertid}
+  \item Report bugs at \url{https://github.com/vfey/convertid/issues}
+}
+
+}
 \author{
 Vidal Fey <vidal.fey@gmail.com>
 Maintainer: Vidal Fey <vidal.fey@gmail.com>
