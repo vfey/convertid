@@ -41,8 +41,19 @@
 * `convertId2()` aborted on input consisting entirely of `NA`, and on empty
   input. It now returns an all-`NA` result of the same length.
 
+* `unify_gene_ids()` returned `NA` for every `hgnc_symbol` when all BioMart
+  hosts failed but the AnnotationDbi lookup succeeded. The AnnotationDbi result
+  was recorded in a separate column and never promoted into `hgnc_symbol`, so
+  the degradation to "AnnotationDbi results only" that the documentation and
+  the verbose output describe did not actually take place.
+
 * `unify_gene_ids()` could abort with "NAs are not allowed in subscripted
   assignments" when the gene symbol column contained `NA`.
+
+* The deduplication filters could fabricate a row: an `NA` in a row-selection
+  condition does not drop the row but yields one filled with `NA`, which could
+  then be taken for the single surviving candidate of its group. One filter
+  could also abort outright on an `NA` gene name.
 
 * The Ensembl-placeholder fix in the deduplication step never ran in ENSG-only
   mode, where there is no gene symbol column.
@@ -57,6 +68,9 @@
 
 * `get.bm()` aborted on R >= 4.2 when `biom.data.set` was given as a
   multi-element vector of user-supplied data set names.
+
+* `likely_symbol()` aborted when a query containing `|` could not be resolved.
+  Such a query is now returned unchanged, as any other unresolved symbol is.
 
 ## Documentation
 
@@ -74,3 +88,12 @@
 
 * Test helpers no longer live in `R/`, and BioMart availability is probed with
   an actual connection rather than a port-level check.
+
+* `AnnotationDbi` moved from `Depends` to `Imports`. The package imports
+  everything it needs from it, so nothing changes for the functions in this
+  package, but `library(convertid)` no longer attaches `AnnotationDbi` to the
+  search path. Code that relied on that side effect should call
+  `library(AnnotationDbi)` itself.
+
+* The test suite uses the third edition of `testthat`. `URL` and `BugReports`
+  fields were added to `DESCRIPTION`.
