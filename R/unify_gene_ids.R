@@ -103,31 +103,39 @@
       x <- .apply_filters(x, dedup_filters_by_name, force_single = FALSE)
     }
 
-    # Fix hgnc_symbol if it is a raw ENSG placeholder. When gene_name is
-    # available the replacement is applied only if gene_name is itself a proper
-    # symbol (not an ENSG ID) and differs from hgnc_symbol. In ENSG-only mode
-    # there is no gene_name column, so every placeholder qualifies -- note that
-    # x$gene_name would be NULL there, which would silently collapse the
-    # condition to length zero and disable the fix altogether.
-    is_placeholder <- grepl("^ENSG", x$hgnc_symbol)
+    # Fix hgnc_symbol wherever it carries no usable symbol. The two cases are
+    # not the same: a symbol that is missing outright always needs a value,
+    # whereas a raw ENSG placeholder is only replaced when something better is
+    # at hand -- with gene_name available that means a proper symbol which
+    # actually differs from it. In ENSG-only mode x$gene_name is NULL, which
+    # would silently collapse the condition to length zero and disable the fix
+    # altogether, so the branches are kept apart.
+    missing_symbol <- is.na(x$hgnc_symbol)
+    placeholder    <- !missing_symbol & grepl("^ENSG", x$hgnc_symbol)
     if (has_symbols) {
-      needs_fix <- is_placeholder &
-                   !is.na(x$gene_name) &
-                   !grepl("^ENSG", x$gene_name) &
-                   x$gene_name != x$hgnc_symbol
-    } else {
-      needs_fix <- is_placeholder
+      placeholder <- placeholder &
+                     !is.na(x$gene_name) &
+                     !grepl("^ENSG", x$gene_name) &
+                     x$gene_name != x$hgnc_symbol
     }
+    needs_fix <- missing_symbol | placeholder
     # Guard against NA from any of the comparisons above: NA indices are not
     # allowed in subscripted assignment and would abort the whole call.
     needs_fix[is.na(needs_fix)] <- FALSE
 
+    # Replacement priority: the AnnotationDbi symbol, then a proper gene_name,
+    # then the Ensembl ID itself -- the same order as the all-lookups-failed
+    # branch of unify_gene_ids().
+    fallback <- if (has_symbols) {
+      ifelse(!is.na(x$gene_name) & !grepl("^ENSG", x$gene_name),
+             x$gene_name, x$ensembl_gene_id)
+    } else {
+      x$ensembl_gene_id
+    }
     from_symbol2  <- needs_fix & !is.na(x$hgnc_symbol_2)
     from_fallback <- needs_fix &  is.na(x$hgnc_symbol_2)
-    x$hgnc_symbol[from_symbol2] <- x$hgnc_symbol_2[from_symbol2]
-    x$hgnc_symbol[from_fallback] <-
-      if (has_symbols) x$gene_name[from_fallback]
-      else             x$ensembl_gene_id[from_fallback]
+    x$hgnc_symbol[from_symbol2]  <- x$hgnc_symbol_2[from_symbol2]
+    x$hgnc_symbol[from_fallback] <- fallback[from_fallback]
     x
   })
 
@@ -379,6 +387,17 @@ unify_gene_ids <- function(genes,
   if (verbose)
     message(sprintf("AnnotationDbi (ENSG -> symbol): resolved %d/%d symbols.",
       sum(!is.na(genes$hgnc_symbol_2)), n_input))
+
+  # With every BioMart host down, .try_biomart() sets hgnc_symbol to NA for
+  # every row. Nothing downstream promotes the AnnotationDbi result into it --
+  # the placeholder fix in .dedup_gene_ids() keys on "^ENSG", and
+  # grepl("^ENSG", NA) is FALSE -- so the documented degradation to
+  # "AnnotationDbi results only" has to happen here.
+  if (!biomart_ok && !all(is.na(genes$hgnc_symbol_2))) {
+    if (verbose)
+      message("Using the AnnotationDbi symbols in place of the BioMart result.")
+    genes$hgnc_symbol <- genes$hgnc_symbol_2
+  }
 
   if (has_symbols) {
     if (verbose) message("Querying AnnotationDbi (symbol -> ENSG)...")
